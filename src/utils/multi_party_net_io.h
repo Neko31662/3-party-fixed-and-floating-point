@@ -6,6 +6,7 @@ class NetIOMP {
   public:
     std::vector<std::shared_ptr<emp::NetIO>> ios1;
     std::vector<std::shared_ptr<emp::NetIO>> ios2;
+    std::vector<std::string> stored_data;
     // NetIO *ios[nP + 1];
     // NetIO *ios2[nP + 1];
     int party;
@@ -19,6 +20,7 @@ class NetIOMP {
         sent.resize(nParty, false);
         ios1.resize(nParty);
         ios2.resize(nParty);
+        stored_data.resize(nParty);
         for (int i = 0; i < nParty; ++i)
             for (int j = 0; j < nParty; ++j)
                 if (i < j) {
@@ -86,6 +88,25 @@ class NetIOMP {
 #ifdef __MORE_FLUSH
         flush(dst);
 #endif
+    }
+    void store_data(int dst, const void *data, size_t len){
+        if (dst != party) {
+            stored_data[dst].append((char *)data, len);
+        }
+    }
+    void send_stored_data(int dst){
+        if (dst != party) {
+            if (stored_data[dst].size() > 0){
+                send_data(dst, stored_data[dst].data(), stored_data[dst].size());
+                stored_data[dst].clear();
+            }
+        }
+    }
+    void send_stored_data_all(){
+        for (int i = 0; i < nParty; ++i)
+            if (i != party) {
+                send_stored_data(i);
+            }
     }
     void recv_data(int src, void *data, size_t len) {
         if (src != party) {

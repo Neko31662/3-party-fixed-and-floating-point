@@ -10,7 +10,8 @@ const int NUM_PARTIES = 3;
 const int ell = 64;
 
 // circuit: (a+b) * (c*d) + (e*f) + g
-uint64_t secret[10] = {111111111, 22222222222222, 33333333333333, 44444444444444, 555555555, 666666666, 777777777};
+uint64_t secret[10] = {111111111, 22222222222222, 33333333333333, 44444444444444,
+                       555555555, 666666666,      777777777};
 
 int main(int argc, char **argv) {
     // net io
@@ -70,15 +71,32 @@ int main(int argc, char **argv) {
     s_add[1]->preprocess(s_mul[2], s_mul[1]);
     s_add[2]->preprocess(s_add[1], s[6]);
 
+    // preprocess后需要调用这个
+    if (party_id == 0) {
+        netio->send_stored_data(2);
+    }
+
     // share
-    for (int i = 0; i < 7; i++) {
-        s[i]->share_from(i % 3, secret[i], *netio);
+    // 要按holder顺序发送，避免死锁
+    for (int holder = 0; holder < 3; holder++) {
+        for (int i = 0; i < 7; i++) {
+            if (i % 3 == holder)
+                s[i]->share_from(i % 3, secret[i], *netio);
+        }
+        if (party_id == holder) {
+            netio->send_stored_data_all();
+        }
     }
 
     // calculate
-    s_add[0]->calc_add();       // a + b
-    s_mul[0]->calc_mul(*netio); // c * d
-    s_mul[1]->calc_mul(*netio); // e * f
+    s_add[0]->calc_add(); // a + b
+    std::vector<std::shared_ptr<MSSshare_mul_res<ell> > > tmp_vec;
+    tmp_vec.push_back(s_mul[0]);
+    tmp_vec.push_back(s_mul[1]);
+    calc_mul_vec(tmp_vec, *netio);
+    // c * d, e * f
+    // s_mul[0]->calc_mul(*netio); // c * d
+    // s_mul[1]->calc_mul(*netio); // e * f
     s_mul[2]->calc_mul(*netio); // (a+b) * (c*d)
     s_add[1]->calc_add();       // (a+b) * (c*d) + (e*f)
     s_add[2]->calc_add();       // (a+b) * (c*d) + (e*f) + g

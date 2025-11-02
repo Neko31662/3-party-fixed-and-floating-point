@@ -3,8 +3,8 @@
 #include <iostream>
 #include <string>
 
-void error(const char *msg) {
-    printf("ERROR: %s\n", msg);
+void error(std::string msg) {
+    std::cout<<"ERROR: " << msg << std::endl;
     exit(1);
 }
 
