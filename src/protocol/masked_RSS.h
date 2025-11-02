@@ -14,6 +14,7 @@ template <int ell> class MSSshare {
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
     bool has_shared = false;
+    int secret_holder_id = 0;
 #endif
     static int party_id;
     static const ShareValue MASK;
@@ -28,6 +29,8 @@ template <int ell> class MSSshare {
         }
     }
 
+    virtual ~MSSshare() = default;
+
     // P0.PRGs[0] <----sync----> P1.PRGs[0]
     // P0.PRGs[1] <----sync----> P2.PRGs[0]
     // If party i holds the secret to be shared: secret_holder_id = i
@@ -38,6 +41,8 @@ template <int ell> class MSSshare {
     void share_from(int secret_holder_id, ShareValue x, NetIOMP &netio);
 
     ShareValue recon(NetIOMP &netio);
+
+    void add_plain(ShareValue x);
 };
 
 template <int ell> class MSSshare_add_res : public MSSshare<ell> {
@@ -51,6 +56,8 @@ template <int ell> class MSSshare_add_res : public MSSshare<ell> {
     using MSSshare<ell>::v2;
 
     std::shared_ptr<MSSshare<ell>> s1, s2;
+
+    virtual ~MSSshare_add_res() = default;
 
     void share_from(int secret_holder_id, ShareValue x, NetIOMP &netio) = delete;
 
@@ -76,6 +83,8 @@ template <int ell> class MSSshare_mul_res : public MSSshare<ell> {
     ShareValue v3;
     std::shared_ptr<MSSshare<ell>> s1, s2;
 
+    virtual ~MSSshare_mul_res() = default;
+
     void share_from(int secret_holder_id, ShareValue x, NetIOMP &netio) = delete;
 
     // P0.PRGs[0] <----sync----> P1.PRGs[0]
@@ -92,15 +101,21 @@ template <int ell>
 const ShareValue MSSshare<ell>::MASK = (ell == 64) ? ~ShareValue(0) : ((ShareValue(1) << ell) - 1);
 template <int ell> const int MSSshare<ell>::BYTELEN = (ell + 7) / 8;
 
+// ===============================================================
+// ======================= implementation ========================
+// ===============================================================
+
 template <int ell> inline void set_MSSshare_party_id(int id) {
-    if (MSSshare<ell>::party_id != -1) {
+    if (MSSshare<ell>::party_id != -1 && MSSshare<ell>::party_id != id) {
         error("MSSshare::party_id can only be set once");
+    }
+    if (id < 0 || id > 2) {
+        error("MSSshare::party_id must be in {0,1,2}");
     }
     MSSshare<ell>::party_id = id;
 };
 
 template <int ell> ShareValue MSSshare<ell>::recon(NetIOMP &netio) {
-    netio.sync();
     ShareValue total;
     if (party_id == 0) {
         netio.send_data(1, &v2, BYTELEN);
@@ -123,6 +138,7 @@ void MSSshare<ell>::preprocess(int secret_holder_id, std::vector<std::shared_ptr
 
 #ifdef DEBUG_MODE
     has_preprocess = true;
+    this->secret_holder_id = secret_holder_id;
 #endif
 
     if (secret_holder_id != 2) {
@@ -154,6 +170,9 @@ void MSSshare<ell>::share_from(int secret_holder_id, ShareValue x, NetIOMP &neti
         error("MSSshare::share must be invoked after MSSshare::preprocess");
     }
     has_shared = true;
+    if (this->secret_holder_id != secret_holder_id) {
+        error("MSSshare::share_from secret_holder_id inconsistent with preprocess");
+    }
 #endif
 
     // Party 0 holds secret x
@@ -191,10 +210,20 @@ void MSSshare<ell>::share_from(int secret_holder_id, ShareValue x, NetIOMP &neti
     }
 }
 
+template <int ell> void MSSshare<ell>::add_plain(ShareValue x) {
+#ifdef DEBUG_MODE
+    if (!has_shared) {
+        error("MSSshare::add_plain must be invoked after shared");
+    }
+#endif
+    if (party_id != 0) {
+        v1 = (v1 + x) & MASK;
+    }
+}
+
 template <int ell>
 void MSSshare_add_res<ell>::preprocess(const std::shared_ptr<MSSshare<ell>> &s1,
                                        const std::shared_ptr<MSSshare<ell>> &s2) {
-
 #ifdef DEBUG_MODE
     if (!s1->has_preprocess || !s2->has_preprocess) {
         error("MSSshare_add_res::preprocess requires s1 and s2 to have been preprocessed");
@@ -287,21 +316,21 @@ template <int ell> void MSSshare_mul_res<ell>::calc_mul(NetIOMP &netio) {
 }
 
 // 压缩函数：将vector<ShareValue>的前ell比特压缩到string
-template <int ell>
-std::string compress_shares(const std::vector<ShareValue>& values) {
-    if (values.empty()) return "";
-    
+template <int ell> std::string compress_shares(const std::vector<ShareValue> &values) {
+    if (values.empty())
+        return "";
+
     const ShareValue MASK = (ell == 64) ? ~ShareValue(0) : ((ShareValue(1) << ell) - 1);
     const size_t num_values = values.size();
     const size_t total_bits = num_values * ell;
-    const size_t total_bytes = (total_bits + 7) / 8;  // 向上取整
-    
+    const size_t total_bytes = (total_bits + 7) / 8; // 向上取整
+
     std::string result(total_bytes, 0);
-    
+
     size_t bit_offset = 0;
     for (size_t i = 0; i < num_values; i++) {
         ShareValue masked_value = values[i] & MASK;
-        
+
         // 将ell比特的数据写入到result中
         for (int bit = 0; bit < ell; bit++) {
             if (masked_value & (ShareValue(1) << bit)) {
@@ -312,50 +341,51 @@ std::string compress_shares(const std::vector<ShareValue>& values) {
             bit_offset++;
         }
     }
-    
+
     return result;
 }
 
 // 解压缩函数：从string解压到vector<ShareValue>
 template <int ell>
-std::vector<ShareValue> decompress_shares(const std::string& compressed, size_t num_values) {
-    if (compressed.empty() || num_values == 0) return {};
-    
+std::vector<ShareValue> decompress_shares(const std::string &compressed, size_t num_values) {
+    if (compressed.empty() || num_values == 0)
+        return {};
+
     const ShareValue MASK = (ell == 64) ? ~ShareValue(0) : ((ShareValue(1) << ell) - 1);
     std::vector<ShareValue> result(num_values, 0);
-    
+
     size_t bit_offset = 0;
     for (size_t i = 0; i < num_values; i++) {
         ShareValue value = 0;
-        
+
         // 从compressed中读取ell比特的数据
         for (int bit = 0; bit < ell; bit++) {
             size_t byte_pos = bit_offset / 8;
             size_t bit_pos = bit_offset % 8;
-            
-            if (byte_pos < compressed.size() && 
-                (compressed[byte_pos] & (1 << bit_pos))) {
+
+            if (byte_pos < compressed.size() && (compressed[byte_pos] & (1 << bit_pos))) {
                 value |= (ShareValue(1) << bit);
             }
             bit_offset++;
         }
-        
+
         result[i] = value & MASK;
     }
-    
+
     return result;
 }
 
 template <int ell>
 void calc_mul_vec(std::vector<std::shared_ptr<MSSshare_mul_res<ell>>> shares, NetIOMP &netio) {
-    if (shares.empty()) return;
-    
+    if (shares.empty())
+        return;
+
     netio.sync();
-    
+
     const int num_shares = shares.size();
     const ShareValue MASK = MSSshare<ell>::MASK;
     const int party_id = MSSshare<ell>::party_id;
-    
+
 #ifdef DEBUG_MODE
     // 检查所有shares的状态
     for (size_t i = 0; i < shares.size(); i++) {
@@ -368,40 +398,40 @@ void calc_mul_vec(std::vector<std::shared_ptr<MSSshare_mul_res<ell>>> shares, Ne
         shares[i]->has_shared = true;
     }
 #endif
-    
+
     if (party_id == 1 || party_id == 2) {
         // 准备发送数据的缓冲区
         std::vector<ShareValue> send_data;
         send_data.reserve(num_shares);
-        
+
         // 计算所有乘法的中间结果
         for (int i = 0; i < num_shares; i++) {
-            auto& share = shares[i];
+            auto &share = shares[i];
             ShareValue temp = 0;
-            
+
             // 计算 s1.v1 * s2.v2 + s1.v2 * s2.v1 + v3 - v2
             temp += share->s1->v1 * share->s2->v2;
             temp += share->s1->v2 * share->s2->v1;
             temp += share->v3;
             temp -= share->v2;
-            
+
             // Party 1 还需要加上 s1.v1 * s2.v1
             if (party_id == 1) {
                 temp += share->s1->v1 * share->s2->v1;
             }
-            
+
             temp &= MASK;
             send_data.push_back(temp);
         }
-        
+
         // 压缩发送数据
         std::string compressed_send = compress_shares<ell>(send_data);
         std::string compressed_recv;
-        
+
         // 计算压缩后的数据大小
         const size_t compressed_size = (num_shares * ell + 7) / 8;
         compressed_recv.resize(compressed_size);
-        
+
         // 一次性发送和接收压缩后的数据
         if (party_id == 1) {
             // Party 1 -> Party 2
@@ -412,10 +442,10 @@ void calc_mul_vec(std::vector<std::shared_ptr<MSSshare_mul_res<ell>>> shares, Ne
             netio.recv_data(1, compressed_recv.data(), compressed_recv.size());
             netio.send_data(1, compressed_send.data(), compressed_send.size());
         }
-        
+
         // 解压缩接收到的数据
         std::vector<ShareValue> recv_data = decompress_shares<ell>(compressed_recv, num_shares);
-        
+
         // 计算最终结果
         for (int i = 0; i < num_shares; i++) {
             shares[i]->v1 = (recv_data[i] + send_data[i]) & MASK;

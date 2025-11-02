@@ -63,6 +63,14 @@ add_executable(MSS_basic_test
 setup_target(MSS_basic_test)
 target_link_libraries(MSS_basic_test pthread gmp)
 
+# 定点数功能测试
+add_executable(fixed_point_test
+    ${COMMON_SOURCES}
+    src/test/fixed_point_test.cpp
+)
+setup_target(fixed_point_test)
+target_link_libraries(fixed_point_test pthread gmp)
+
 
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest

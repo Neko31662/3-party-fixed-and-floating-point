@@ -7,9 +7,9 @@
 using namespace std;
 const int BASE_PORT = 12345;
 const int NUM_PARTIES = 3;
-const int ell = 64;
+const int ell = 60;
 
-// circuit: (a+b) * (c*d) + (e*f) + g
+// circuit: (a+b) * (c*d) + (e*f) + g - 10
 uint64_t secret[10] = {111111111, 22222222222222, 33333333333333, 44444444444444,
                        555555555, 666666666,      777777777};
 
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     PRGs[0] = std::make_shared<PRGSync>(&seed1);
     PRGs[1] = std::make_shared<PRGSync>(&seed2);
 
-    // sample shares
+    // shares allocation
     int len = 20;
     set_MSSshare_party_id<ell>(party_id);
     std::vector<std::shared_ptr<MSSshare<ell>>> s(len);
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 
     // calculate
     s_add[0]->calc_add(); // a + b
-    std::vector<std::shared_ptr<MSSshare_mul_res<ell> > > tmp_vec;
+    std::vector<std::shared_ptr<MSSshare_mul_res<ell>>> tmp_vec;
     tmp_vec.push_back(s_mul[0]);
     tmp_vec.push_back(s_mul[1]);
     calc_mul_vec(tmp_vec, *netio);
@@ -100,6 +100,7 @@ int main(int argc, char **argv) {
     s_mul[2]->calc_mul(*netio); // (a+b) * (c*d)
     s_add[1]->calc_add();       // (a+b) * (c*d) + (e*f)
     s_add[2]->calc_add();       // (a+b) * (c*d) + (e*f) + g
+    s_add[2]->add_plain(ShareValue(-10));
 
     // reconstruct
     ShareValue rec[len];
@@ -126,8 +127,8 @@ int main(int argc, char **argv) {
     for (int i = 0; i <= 2; i++) {
         cout << "Reconstructed s_mul[" << i << "]: " << rec_mul[i] << endl;
     }
-    ShareValue res =
-        ((secret[0] + secret[1]) * (secret[2] * secret[3]) + (secret[4] * secret[5]) + secret[6]);
+    ShareValue res = ((secret[0] + secret[1]) * (secret[2] * secret[3]) + (secret[4] * secret[5]) +
+                      secret[6] - 10);
     if (ell < 64)
         res %= (1ULL << ell);
     cout << "Reconstructed result: " << rec_add[2] << endl;
