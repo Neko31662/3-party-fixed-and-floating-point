@@ -17,7 +17,7 @@ set(PROJECT_INCLUDE_DIRS
 
 # 定义通用的源文件集合，避免重复
 set(COMMON_SOURCES
-    
+    # src/protocol/masked_RSS.cpp
 )
 
 # 为所有目标设置宏定义和包含目录
@@ -54,6 +54,15 @@ add_executable(prg_test
 )
 setup_target(prg_test)
 target_link_libraries(prg_test pthread gmp)
+
+# MSS基础功能测试
+add_executable(MSS_basic_test
+    ${COMMON_SOURCES}
+    src/test/MSS_basic_test.cpp
+)
+setup_target(MSS_basic_test)
+target_link_libraries(MSS_basic_test pthread gmp)
+
 
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest

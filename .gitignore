@@ -1,5 +1,6 @@
 build/
 *.log
+*.pid
 .vscode/
 
 emp-tool/
