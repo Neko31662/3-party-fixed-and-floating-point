@@ -98,18 +98,17 @@ int main(int argc, char **argv) {
 
     // show result
     for (int i = 0; i <= 6; i++) {
-        cout << "Reconstructed s[" << i << "]: " << rec[i] << endl;
+        cout << "Reconstructed s[" << i << "]: " << (uint64_t)rec[i] << endl;
     }
     for (int i = 0; i <= 0; i++) {
-        cout << "Reconstructed s_add[" << i << "]: " << rec_add[i] << endl;
+        cout << "Reconstructed s_add[" << i << "]: " << (uint64_t)rec_add[i] << endl;
     }
     // for (int i = 0; i <= 2; i++) {
     //     cout << "Reconstructed s_mul[" << i << "]: " << rec_mul[i] << endl;
     // }
-    ShareValue res =
-        (secret[0] + secret[1]);
-    cout << "Reconstructed result: " << rec_add[0] << endl;
-    cout << "Expected result: " << res << endl;
+    ShareValue res = (secret[0] + secret[1]);
+    cout << "Reconstructed result: " << (uint64_t)rec_add[0] << endl;
+    cout << "Expected result: " << (uint64_t)res << endl;
     if (rec_add[0] == res) {
         cout << "Fixed point test passed!" << endl;
         return 0;

@@ -5,7 +5,7 @@
 using block = emp::block;
 using PRG = emp::PRG;
 
-block gen_seed() {
+inline block gen_seed() {
     block v;
 #ifndef ENABLE_RDSEED
     uint32_t *data = (uint32_t *)(&v);

@@ -119,20 +119,20 @@ int main(int argc, char **argv) {
 
     // show result
     for (int i = 0; i <= 6; i++) {
-        cout << "Reconstructed s[" << i << "]: " << rec[i] << endl;
+        cout << "Reconstructed s[" << i << "]: " << (uint64_t)rec[i] << endl;
     }
     for (int i = 0; i <= 2; i++) {
-        cout << "Reconstructed s_add[" << i << "]: " << rec_add[i] << endl;
+        cout << "Reconstructed s_add[" << i << "]: " << (uint64_t)rec_add[i] << endl;
     }
     for (int i = 0; i <= 2; i++) {
-        cout << "Reconstructed s_mul[" << i << "]: " << rec_mul[i] << endl;
+        cout << "Reconstructed s_mul[" << i << "]: " << (uint64_t)rec_mul[i] << endl;
     }
     ShareValue res = ((secret[0] + secret[1]) * (secret[2] * secret[3]) + (secret[4] * secret[5]) +
                       secret[6] - 10);
     if (ell < 64)
         res %= (1ULL << ell);
-    cout << "Reconstructed result: " << rec_add[2] << endl;
-    cout << "Expected result: " << res << endl;
+    cout << "Reconstructed result: " << (uint64_t)rec_add[2] << endl;
+    cout << "Expected result: " << (uint64_t)res << endl;
     if (rec_add[2] == res) {
         cout << "MSS basic test passed!" << endl;
         return 0;

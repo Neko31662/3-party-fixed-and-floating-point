@@ -18,6 +18,7 @@ set(PROJECT_INCLUDE_DIRS
 # 定义通用的源文件集合，避免重复
 set(COMMON_SOURCES
     # src/protocol/masked_RSS.cpp
+    src/protocol/detect.cpp
 )
 
 # 为所有目标设置宏定义和包含目录
@@ -71,6 +72,29 @@ add_executable(fixed_point_test
 setup_target(fixed_point_test)
 target_link_libraries(fixed_point_test pthread gmp)
 
+# 定点数明文乘法测试
+add_executable(fixed_point_plain_mul_test
+    ${COMMON_SOURCES}
+    src/test/fixed_point_plain_mul_test.cpp
+)
+setup_target(fixed_point_plain_mul_test)
+target_link_libraries(fixed_point_plain_mul_test pthread gmp)
+
+# detect协议测试
+add_executable(detect_test
+    ${COMMON_SOURCES}
+    src/test/detect_test.cpp
+)
+setup_target(detect_test)
+target_link_libraries(detect_test pthread gmp)
+
+# prefix协议测试
+add_executable(prefix_test
+    ${COMMON_SOURCES}
+    src/test/prefix_test.cpp
+)
+setup_target(prefix_test)
+target_link_libraries(prefix_test pthread gmp)
 
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest

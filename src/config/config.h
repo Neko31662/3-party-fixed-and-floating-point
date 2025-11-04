@@ -1,9 +1,14 @@
 #pragma once
+
+#ifndef GLOBAL_CONFIG
+#define GLOBAL_CONFIG
 #include <cstdint>
 
 #define LOCALHOST
 #define DEBUG_MODE
 #define __MORE_FLUSH
-const char* IP[]={"127.0.0.1","127.0.0.1","127.0.0.1"};
+inline const char *IP[] = {"127.0.0.1", "127.0.0.1", "127.0.0.1"};
 
-typedef uint64_t ShareValue;
+typedef __uint128_t ShareValue;
+
+#endif
