@@ -9,6 +9,7 @@ const int BASE_PORT = 12345;
 const int NUM_PARTIES = 3;
 const int ell = 60;
 
+const int len = 20;
 // circuit: (a+b) * (c*d) + (e*f) + g - 10
 uint64_t secret[10] = {111111111, 22222222222222, 33333333333333, 44444444444444,
                        555555555, 666666666,      777777777};
@@ -27,49 +28,38 @@ int main(int argc, char **argv) {
         seed2 = gen_seed();
         netio->send_data(1, &seed1, sizeof(block));
         netio->send_data(2, &seed2, sizeof(block));
-        netio->flush_all();
     } else if (party_id == 1) {
         netio->recv_data(0, &seed1, sizeof(block));
+        seed2 = gen_seed();
+        netio->send_data(2, &seed2, sizeof(block));
     } else if (party_id == 2) {
         netio->recv_data(0, &seed1, sizeof(block));
+        netio->recv_data(1, &seed2, sizeof(block));
     }
-    std::vector<std::shared_ptr<PRGSync>> PRGs(2);
-    PRGs[0] = std::make_shared<PRGSync>(&seed1);
-    PRGs[1] = std::make_shared<PRGSync>(&seed2);
+    vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
 
     // shares allocation
-    int len = 20;
-    set_MSSshare_party_id<ell>(party_id);
-    std::vector<std::shared_ptr<MSSshare<ell>>> s(len);
-    for (int i = 0; i < (int)s.size(); i++) {
-        s[i] = std::make_shared<MSSshare<ell>>();
-    }
-    std::vector<std::shared_ptr<MSSshare_add_res<ell>>> s_add(len);
-    for (int i = 0; i < (int)s_add.size(); i++) {
-        s_add[i] = std::make_shared<MSSshare_add_res<ell>>();
-    }
-    std::vector<std::shared_ptr<MSSshare_mul_res<ell>>> s_mul(len);
-    for (int i = 0; i < (int)s_mul.size(); i++) {
-        s_mul[i] = std::make_shared<MSSshare_mul_res<ell>>();
-    }
+    std::vector<MSSshare<ell>> s(len);
+    std::vector<MSSshare_add_res<ell>> s_add(len);
+    std::vector<MSSshare_mul_res<ell>> s_mul(len);
 
     // preprocess
     //    i: 0, 1, 2, 3, 4, 5, 6
     // s[i]: a, b, c, d, e, f, g
     for (int i = 0; i < (int)s.size(); i++) {
-        s[i]->preprocess(i % 3, PRGs);
+        MSSshare_preprocess(i % 3, party_id, PRGs, *netio, &s[i]);
     }
     //        i: 0,   1,                     2
     // s_add[i]: a+b, (a+b) * (c*d) + (e*f), (a+b) * (c*d) + (e*f) + g
     // ======================================================================
     //        i: 0,   1,   2
     // s_mul[i]: c*d, e*f, (a+b) * (c*d)
-    s_add[0]->preprocess(s[0], s[1]);
-    s_mul[0]->preprocess(PRGs, *netio, s[2], s[3]);
-    s_mul[1]->preprocess(PRGs, *netio, s[4], s[5]);
-    s_mul[2]->preprocess(PRGs, *netio, s_mul[0], s_add[0]);
-    s_add[1]->preprocess(s_mul[2], s_mul[1]);
-    s_add[2]->preprocess(s_add[1], s[6]);
+    MSSshare_add_res_preprocess(party_id, &s_add[0], &s[0], &s[1]);
+    MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[0], &s[2], &s[3]);
+    MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[1], &s[4], &s[5]);
+    MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[2], &s_mul[0], &s_add[0]);
+    MSSshare_add_res_preprocess(party_id, &s_add[1], &s_mul[2], &s_mul[1]);
+    MSSshare_add_res_preprocess(party_id, &s_add[2], &s_add[1], &s[6]);
 
     // preprocess后需要调用这个
     if (party_id == 0) {
@@ -77,43 +67,34 @@ int main(int argc, char **argv) {
     }
 
     // share
-    // 要按holder顺序发送，避免死锁
     for (int holder = 0; holder < 3; holder++) {
         for (int i = 0; i < 7; i++) {
             if (i % 3 == holder)
-                s[i]->share_from(i % 3, secret[i], *netio);
-        }
-        if (party_id == holder) {
-            netio->send_stored_data_all();
+                MSSshare_share_from(i % 3, party_id, *netio, &s[i], secret[i]);
         }
     }
 
     // calculate
-    s_add[0]->calc_add(); // a + b
-    std::vector<std::shared_ptr<MSSshare_mul_res<ell>>> tmp_vec;
-    tmp_vec.push_back(s_mul[0]);
-    tmp_vec.push_back(s_mul[1]);
-    calc_mul_vec(tmp_vec, *netio);
-    // c * d, e * f
-    // s_mul[0]->calc_mul(*netio); // c * d
-    // s_mul[1]->calc_mul(*netio); // e * f
-    s_mul[2]->calc_mul(*netio); // (a+b) * (c*d)
-    s_add[1]->calc_add();       // (a+b) * (c*d) + (e*f)
-    s_add[2]->calc_add();       // (a+b) * (c*d) + (e*f) + g
-    s_add[2]->add_plain(ShareValue(-10));
+    MSSshare_add_res_calc_add(party_id, &s_add[0], &s[0], &s[1]);
+    MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul[0], &s[2], &s[3]);
+    MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul[1], &s[4], &s[5]);
+    MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul[2], &s_mul[0], &s_add[0]);
+    MSSshare_add_res_calc_add(party_id, &s_add[1], &s_mul[2], &s_mul[1]);
+    MSSshare_add_res_calc_add(party_id, &s_add[2], &s_add[1], &s[6]);
+    MSSshare_add_plain(party_id, &s_add[2], ShareValue(-10));
 
     // reconstruct
     ShareValue rec[len];
     ShareValue rec_add[len];
     ShareValue rec_mul[len];
     for (int i = 0; i <= 6; i++) {
-        rec[i] = s[i]->recon(*netio);
+        rec[i] = MSSshare_recon(party_id, *netio, &s[i]);
     }
     for (int i = 0; i <= 2; i++) {
-        rec_add[i] = s_add[i]->recon(*netio);
+        rec_add[i] = MSSshare_recon(party_id, *netio, &s_add[i]);
     }
     for (int i = 0; i <= 2; i++) {
-        rec_mul[i] = s_mul[i]->recon(*netio);
+        rec_mul[i] = MSSshare_recon(party_id, *netio, &s_mul[i]);
     }
     delete netio;
 
@@ -129,7 +110,7 @@ int main(int argc, char **argv) {
     }
     ShareValue res = ((secret[0] + secret[1]) * (secret[2] * secret[3]) + (secret[4] * secret[5]) +
                       secret[6] - 10);
-    if (ell < 64)
+    if (ell < ShareValue_BitLength)
         res %= (1ULL << ell);
     cout << "Reconstructed result: " << (uint64_t)rec_add[2] << endl;
     cout << "Expected result: " << (uint64_t)res << endl;

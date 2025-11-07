@@ -1,4 +1,5 @@
 #pragma once
+#include "config/config.h"
 #include "protocol/masked_RSS.h"
 #include "utils/misc.h"
 #include "utils/permutation.h"

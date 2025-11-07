@@ -17,6 +17,17 @@ inline void log(std::string msg) {
     fflush(stdout);
 }
 
+// 计算最高位 1 的位置（最低位为1）
+constexpr static inline int highest_bit_pos(uint64_t x) {
+    assert(x != 0);
+    int pos = 0;
+    while (x) {
+        ++pos;
+        x >>= 1;
+    }
+    return pos;
+}
+
 struct encoded_msg {
     std::vector<bool> data;
     int read_pos = 0;
@@ -79,11 +90,7 @@ struct encoded_msg {
         read_pos = 0;
     }
 
-    inline size_t get_bytelen() {
-        return (data.size() + 7) / 8;
-    }
+    inline size_t get_bytelen() { return (data.size() + 7) / 8; }
 
-    inline size_t get_bitlen() {
-        return data.size();
-    }
+    inline size_t get_bitlen() { return data.size(); }
 };

@@ -49,10 +49,8 @@ void common_part(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
     // Step 3: P1和P2随机同步生成一个长度为l排列pi，以及它的逆排列pi_inv
     std::vector<int> pi, pi_inv;
-    char seed[8];
     if (party_id == 1 || party_id == 2) {
-        PRGs[1].gen_random_data(seed, 8);
-        pi = gen_random_permutation(l, seed);
+        pi = gen_random_permutation(l, PRGs[1]);
         pi_inv = inv_permutation(pi);
     }
 

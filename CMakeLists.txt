@@ -19,6 +19,7 @@ set(PROJECT_INCLUDE_DIRS
 set(COMMON_SOURCES
     # src/protocol/masked_RSS.cpp
     src/protocol/detect.cpp
+    # src/protocol/addictive_share.cpp
 )
 
 # 为所有目标设置宏定义和包含目录
@@ -95,6 +96,22 @@ add_executable(prefix_test
 )
 setup_target(prefix_test)
 target_link_libraries(prefix_test pthread gmp)
+
+# 两方加法分享测试
+add_executable(addictive_share_test
+    ${COMMON_SOURCES}
+    src/test/addictive_share_test.cpp
+)
+setup_target(addictive_share_test)
+target_link_libraries(addictive_share_test pthread gmp)
+
+# 移位协议测试
+add_executable(shift_test
+    ${COMMON_SOURCES}
+    src/test/shift_test.cpp
+)
+setup_target(shift_test)
+target_link_libraries(shift_test pthread gmp)
 
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest

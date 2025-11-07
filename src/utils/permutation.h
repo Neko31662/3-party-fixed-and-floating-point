@@ -1,5 +1,6 @@
 #pragma once
 #include "config/config.h"
+#include "utils/prg_sync.h"
 #include <cstdio>
 #include <iostream>
 #include <string>
@@ -7,10 +8,12 @@
 
 // 生成长度为n的随机排列，使用seed作为随机种子
 // seed长度为8字节
-inline std::vector<int> gen_random_permutation(int n, const char *seed) {
+inline std::vector<int> gen_random_permutation(int n, PRGSync &prg) {
     if (n <= 0) {
         return std::vector<int>();
     }
+    char seed[8];
+    prg.gen_random_data((void *)seed, 8);
 
     // 初始化排列 [0, 1, 2, ..., n-1]
     std::vector<int> permutation(n);
@@ -55,7 +58,6 @@ inline std::vector<int> inv_permutation(const std::vector<int> &perm) {
     }
     return rev_perm;
 }
-
 
 template <typename T>
 inline std::vector<T> apply_permutation(const std::vector<int> &pi, std::vector<T> &data) {
