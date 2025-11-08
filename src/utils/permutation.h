@@ -64,9 +64,9 @@ inline std::vector<T> apply_permutation(const std::vector<int> &pi, std::vector<
     if (pi.size() != data.size()) {
         throw std::invalid_argument("Permutation vector and data vector must have the same size");
     }
-    std::vector<T> temp(data.size());
+    std::vector<T> temp;
     for (size_t i = 0; i < pi.size(); i++) {
-        temp[i] = data[pi[i]];
+        temp.push_back(data[pi[i]]);
     }
     return temp;
 }

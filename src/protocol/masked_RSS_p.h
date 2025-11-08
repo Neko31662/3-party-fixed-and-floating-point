@@ -29,9 +29,9 @@ class MSSshare_p {
             BITLEN++;
         }
         BYTELEN = (BITLEN + 7) / 8;
-        if (BITLEN > sizeof(ShareValue) * 8 / 2) {
+        if (BITLEN > sizeof(ShareValue) * 8 / 2 && this->p != (ShareValue(1) << BITLEN)) {
             error("MSSshare_p: length of p exceeds ShareValue/2 =" +
-                  std::to_string(sizeof(ShareValue) * 8 / 2));
+                  std::to_string(sizeof(ShareValue) * 8 / 2) + ", and p is not power of 2");
         }
     }
 
@@ -87,7 +87,7 @@ class MSSshare_p_mul_res : public MSSshare_p {
  * @param netio: 多方通信接口
  * @param s: 待重构的MSSshare_p对象指针
  */
-ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s);
+inline ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s);
 
 /* 预处理MSSshare_p对象
  * @param secret_holder_id: 秘密值持有方id，0/1,2，如果该对象之后不进行share_from，必须传入0
@@ -99,7 +99,7 @@ ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s);
  * @param netio: 多方通信接口
  * @param s: MSSshare_p对象指针
  */
-void MSSshare_p_preprocess(const int secret_holder_id, const int party_id,
+inline void MSSshare_p_preprocess(const int secret_holder_id, const int party_id,
                            std::vector<PRGSync> &PRGs, NetIOMP &netio, MSSshare_p *s);
 
 /* 预处理MSSshare_p_add_res对象
@@ -108,7 +108,7 @@ void MSSshare_p_preprocess(const int secret_holder_id, const int party_id,
  * @param s1: 第一个作为加法输入的分享对象的指针
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
-void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
+inline void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
                                    MSSshare_p *s2);
 
 /* 预处理MSSshare_p_add_res对象，结果为多个分享对象的带系数累加
@@ -117,7 +117,7 @@ void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p_add_res *res, 
  * @param s_vec: 多个作为加法输入的分享对象的指针数组
  * @param coeff_vec: 对应的明文系数数组，可以是负数
  */
-void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p_add_res *res,
+inline void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p_add_res *res,
                                          std::vector<MSSshare_p *> &s_vec,
                                          std::vector<int> &coeff_vec);
 
@@ -132,7 +132,7 @@ void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p_add_res 
  * @param s1: 第一个作为乘法输入的分享对象的指针
  * @param s2: 第二个作为乘法输入的分享对象的指针
  */
-void MSSshare_p_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+inline void MSSshare_p_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                                    MSSshare_p_mul_res *res, const MSSshare_p *s1,
                                    const MSSshare_p *s2);
 
@@ -143,19 +143,19 @@ void MSSshare_p_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRG
  * @param netio: 多方通信接口
  * @param s: 存储分享结果的MSSshare_p对象指针
  */
-void MSSshare_p_share_from(const int secret_holder_id, const int party_id, NetIOMP &netio,
+inline void MSSshare_p_share_from(const int secret_holder_id, const int party_id, NetIOMP &netio,
                            MSSshare_p *s, ShareValue x);
 
 /*与MSSshare_p_share_from类似，但将分享结果存储在netio的缓存中，等待后续发送，此时secret_holder_id必须为0
  */
-void MSSshare_p_share_from_store(const int party_id, NetIOMP &netio, MSSshare_p *s, ShareValue x);
+inline void MSSshare_p_share_from_store(const int party_id, NetIOMP &netio, MSSshare_p *s, ShareValue x);
 
 /*明文加法
  * @param party_id: 参与方id，0/1/2
  * @param s: 存储分享结果的MSSshare_p对象指针
  * @param x: 待加的明文值
  */
-void MSSshare_p_add_plain(const int party_id, MSSshare_p *s, ShareValue x);
+inline void MSSshare_p_add_plain(const int party_id, MSSshare_p *s, ShareValue x);
 
 /*密文加法
  * @param party_id: 参与方id，0/1/2
@@ -163,7 +163,7 @@ void MSSshare_p_add_plain(const int party_id, MSSshare_p *s, ShareValue x);
  * @param s1: 第一个作为加法输入的分享对象的指针
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
-void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
+inline void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
                                  MSSshare_p *s2);
 
 /*密文加法，带系数的多重累加
@@ -172,7 +172,7 @@ void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p_add_res *res, MS
  * @param s_vec: 多个作为加法输入的分享对象的指针数组
  * @param coeff_vec: 对应的明文系数数组，可以是负数
  */
-void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p_add_res *res,
+inline void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p_add_res *res,
                                        std::vector<MSSshare_p *> &s_vec,
                                        std::vector<int> &coeff_vec);
 
@@ -183,7 +183,7 @@ void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p_add_res *r
  * @param s1: 第一个作为乘法输入的分享对象的指针
  * @param s2: 第二个作为乘法输入的分享对象的指针
  */
-void MSSshare_p_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_p_mul_res *res,
+inline void MSSshare_p_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_p_mul_res *res,
                                  const MSSshare_p *s1, const MSSshare_p *s2);
 
 #include "protocol/masked_RSS_p.tpp"

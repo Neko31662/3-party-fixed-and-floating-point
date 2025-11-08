@@ -37,70 +37,129 @@ int main(int argc, char **argv) {
     }
     vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
 
-    for (int i = 0; i < test_nums; i++) {
-        // generate bit shares
-        std::vector<ShareValue> bit_shares(l);
-        std::vector<bool> plain_bits(l);
-        if (party_id != 0) {
-            for (int i = 0; i < l; i++) {
-                ShareValue tmp;
-                PRGs[1].gen_random_data(&tmp, sizeof(ShareValue));
-                bit_shares[i] = party_id == 1 ? tmp % 2 : 0;
-            }
-            if (party_id == 1) {
+    // b缺省
+    {
+        for (int i = 0; i < test_nums; i++) {
+            // generate bit shares
+            std::vector<ADDshare_p> bit_shares(l, p1);
+            std::vector<ADDshare_p> output_result(l, p2);
+            std::vector<bool> plain_bits(l);
+            if (party_id != 0) {
                 for (int i = 0; i < l; i++) {
-                    plain_bits[i] = bit_shares[i];
+                    ShareValue tmp;
+                    PRGs[1].gen_random_data(&tmp, sizeof(ShareValue));
+                    plain_bits[i] = tmp % 2;
                 }
             }
             for (int i = 0; i < l; i++) {
-                ShareValue tmp;
-                PRGs[1].gen_random_data(&tmp, sizeof(ShareValue));
-                if (party_id == 1) {
-                    bit_shares[i] = (bit_shares[i] + tmp) % p1;
-                } else {
-                    bit_shares[i] = (bit_shares[i] + p1 - (tmp % p1)) % p1;
-                }
+                ADDshare_p_share_from(2, party_id, PRGs, *netio, &bit_shares[i], plain_bits[i]);
             }
-        }
+            vector<ADDshare_p *> bit_share_ptrs = make_ptr_vec(bit_shares);
+            vector<ADDshare_p *> output_result_ptrs = make_ptr_vec(output_result);
 
-        vector<ShareValue> output_result(l);
-        PI_prefix(party_id, PRGs, *netio, bit_shares, p1, p2, output_result);
-        if (party_id == 2) {
-            netio->send_data(1, output_result.data(), sizeof(output_result[0]) * l);
-        } else if (party_id == 1) {
-            vector<ShareValue> tmp(l);
-            netio->recv_data(2, tmp.data(), sizeof(tmp[0]) * l);
-            for (int i = 0; i < l; i++) {
-                output_result[i] = (output_result[i] + tmp[i]) % p2;
-            }
-        }
+            // compute
+            PI_prefix(party_id, PRGs, *netio, bit_share_ptrs, output_result_ptrs);
 
-        // check result
-        if (party_id == 1) {
-            int first_one_index = l;
+            // reconstruct result
+            vector<ShareValue> plain_output_result(l);
             for (int i = 0; i < l; i++) {
-                if (plain_bits[i]) {
-                    first_one_index = i;
-                    break;
-                }
+                plain_output_result[i] = ADDshare_p_recon(party_id, *netio, &output_result[i]);
             }
-            for (int i = 0; i < l; i++) {
-                if (i <= first_one_index) {
-                    if (output_result[i] != 1) {
-                        std::cout << "Error at test " << i << ": prefix result incorrect at index "
-                                  << i << std::endl;
-                        return -1;
+
+            // check result
+            if (party_id == 1) {
+                int first_one_index = l;
+                for (int i = 0; i < l; i++) {
+                    if (plain_bits[i]) {
+                        first_one_index = i;
+                        break;
                     }
-                } else {
-                    if (output_result[i] != 0) {
-                        std::cout << "Error at test " << i << ": prefix result incorrect at index "
-                                  << i << std::endl;
-                        return -1;
+                }
+                for (int i = 0; i < l; i++) {
+                    if (i <= first_one_index) {
+                        if (plain_output_result[i] != 1) {
+                            std::cout << "Error at test " << i
+                                      << ": prefix result incorrect at index " << i << std::endl;
+                            return -1;
+                        }
+                    } else {
+                        if (plain_output_result[i] != 0) {
+                            std::cout << "Error at test " << i
+                                      << ": prefix result incorrect at index " << i << std::endl;
+                            return -1;
+                        }
                     }
                 }
             }
         }
     }
     std::cout << "PI_prefix test passed!" << std::endl;
+
+    // b提供
+    {
+        for (int i = 0; i < test_nums; i++) {
+            // generate bit shares
+            std::vector<ADDshare_p> bit_shares(l, p1);
+            std::vector<ADDshare_p> output_result(l, p2);
+            std::vector<bool> plain_bits(l);
+            MSSshare_p b(p2);
+
+            // preprocess
+            MSSshare_p_preprocess(0, party_id, PRGs, *netio, &b);
+
+            // share
+            ShareValue plain_b = i;
+            MSSshare_p_share_from(0, party_id, *netio, &b, plain_b);
+            if (party_id != 0) {
+                for (int i = 0; i < l; i++) {
+                    ShareValue tmp;
+                    PRGs[1].gen_random_data(&tmp, sizeof(ShareValue));
+                    plain_bits[i] = tmp % 2;
+                }
+            }
+            for (int i = 0; i < l; i++) {
+                ADDshare_p_share_from(2, party_id, PRGs, *netio, &bit_shares[i], plain_bits[i]);
+            }
+            vector<ADDshare_p *> bit_share_ptrs = make_ptr_vec(bit_shares);
+            vector<ADDshare_p *> output_result_ptrs = make_ptr_vec(output_result);
+
+            // compute
+            PI_prefix_b(party_id, PRGs, *netio, bit_share_ptrs, &b, output_result_ptrs);
+
+            // reconstruct result
+            vector<ShareValue> plain_output_result(l);
+            for (int i = 0; i < l; i++) {
+                plain_output_result[i] = ADDshare_p_recon(party_id, *netio, &output_result[i]);
+            }
+
+            // check result
+            if (party_id == 1) {
+                int first_one_index = l;
+                for (int i = 0; i < l; i++) {
+                    if (plain_bits[i]) {
+                        first_one_index = i;
+                        break;
+                    }
+                }
+                for (int i = 0; i < l; i++) {
+                    if (i <= first_one_index) {
+                        if (plain_output_result[i] != (plain_b % p2)) {
+                            std::cout << "Error at test " << i
+                                      << ": prefix_b result incorrect at index " << i << std::endl;
+                            return -1;
+                        }
+                    } else {
+                        if (plain_output_result[i] != 0) {
+                            std::cout << "Error at test " << i
+                                      << ": prefix_b result incorrect at index " << i << std::endl;
+                            return -1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "PI_prefix_b test passed!" << std::endl;
     delete netio;
 }

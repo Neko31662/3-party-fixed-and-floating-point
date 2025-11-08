@@ -113,15 +113,16 @@ struct encoded_msg {
     inline size_t get_bitlen() { return data.size(); }
 };
 
-template <typename T> std::vector<T *> make_ptr_vec(const std::vector<T> &vec) {
+template <typename T> std::vector<T *> make_ptr_vec(std::vector<T> &vec) {
     std::vector<T *> ptrs;
-    for (const auto &item : vec) {
+    for (auto &item : vec) {
         ptrs.push_back(&item);
     }
     return ptrs;
 }
 
-template <typename T, typename... Ts> std::vector<T *> make_ptr_vec(T &first, Ts &...rest) {
+template <typename T, typename... Ts>
+std::vector<T *> make_ptr_vec(T &first, T &second, Ts &...rest) {
     using PtrT = std::add_pointer_t<T>;
-    return std::vector<PtrT>{&first, &rest...};
+    return std::vector<PtrT>{&first, &second, &rest...};
 }
