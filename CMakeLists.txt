@@ -137,6 +137,14 @@ add_executable(wrap_test
 setup_target(wrap_test)
 target_link_libraries(wrap_test pthread gmp)
 
+# convert协议测试
+add_executable(convert_test
+    ${COMMON_SOURCES}
+    src/test/convert_test.cpp
+)
+setup_target(convert_test)
+target_link_libraries(convert_test pthread gmp)
+
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest
 #     ${COMMON_SOURCES}
