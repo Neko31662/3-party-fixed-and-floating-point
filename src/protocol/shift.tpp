@@ -46,11 +46,10 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         return;
     }
 
-
     if (party_id == 1 || party_id == 2) {
         // Step 1: 计算di_prime = 2 ^ ki (mod 2^EXPANDED_ELL(ell) )，并设为两个加法分享
         ShareValue di_prime = LongShareValue(1) << (input_k->v & input_k->MASK);
-        ADDshare<EXPANDED_ELL(ell)> di_prime_share[2];
+        ADDshare<EXPANDED_ELL(ell), LongShareValue> di_prime_share[2];
         if (party_id == 1) {
             di_prime_share[0].v = di_prime;
             di_prime_share[1].v = 0;
@@ -104,9 +103,10 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 #endif
         // ADDshare_mul_res_cal_mult(party_id, netio, &intermediate.gamma2, &d_first_bit[0],
         //                           &d_first_bit[1]);
-        ADDshare_mul_res_cal_mult_vec<ell>(party_id, netio, {&intermediate.gamma1, &intermediate.gamma2},
-                                      {&k_first_bit[0], &d_first_bit[0]},
-                                      {&k_first_bit[1], &d_first_bit[1]});
+        auto vec0 = make_ptr_vec(intermediate.gamma1, intermediate.gamma2);
+        auto vec1 = make_ptr_vec(k_first_bit[0], d_first_bit[0]);
+        auto vec2 = make_ptr_vec(k_first_bit[1], d_first_bit[1]);
+        ADDshare_mul_res_cal_mult_vec(party_id, netio, vec0, vec1, vec2);
 
         // Step5: 计算 c = k_first_bit[0] + k_first_bit[1] - gamma1
         ADDshare<ell> c;
@@ -168,14 +168,29 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         // For debug
         // auto recon1 = ADDshare_recon(party_id, netio, &di_prime_share[0]);
         // auto recon2 = ADDshare_recon(party_id, netio, &di_prime_share[1]);
-        // std::cout << "di_prime_share[0] recon: " << log2((uint64_t)recon1) << std::endl;
-        // std::cout << "di_prime_share[1] recon: " << log2((uint64_t)recon2) << std::endl;
+        // std::cout << "log(di_prime_share[0]) recon: " << log2((uint64_t)recon1) << std::endl;
+        // std::cout << "log(di_prime_share[1]) recon: " << log2((uint64_t)recon2) << std::endl;
         // auto recon3 = ADDshare_recon(party_id, netio, &intermediate.d_prime);
-        // std::cout << "di_prime recon: " << log2(recon3) << std::endl;
+        // std::cout << "log(di_prime) recon: " << log2(recon3) << std::endl;
+        // auto recon4_1 = ADDshare_recon(party_id, netio, &k_first_bit[0]);
+        // auto recon4_2 = ADDshare_recon(party_id, netio, &k_first_bit[1]);
+        // auto reron4_3 = ADDshare_recon(party_id, netio, &intermediate.gamma1);
         // auto recon4 = ADDshare_recon(party_id, netio, &c);
-        // std::cout << "c recon: " << (uint64_t)recon4 << std::endl;
+        // std::cout << "k_first_bit[0] recon: " << (uint64_t)recon4_1
+        //           << " ,k_first_bit[0]:" << k_first_bit[0].v << std::endl;
+        // std::cout << "k_first_bit[1] recon: " << (uint64_t)recon4_2
+        //           << " ,k_first_bit[1]:" << k_first_bit[1].v << std::endl;
+        // std::cout << "gamma1 recon: " << (uint64_t)reron4_3 << " ,gamma1:" << intermediate.gamma1.v
+        //           << std::endl;
+        // std::cout << "c recon: " << (uint64_t)recon4 << std::endl << std::endl;
+        // auto recon5_1 = ADDshare_recon(party_id, netio, &d_first_bit[0]);
+        // auto recon5_2 = ADDshare_recon(party_id, netio, &d_first_bit[1]);
+        // auto recon5_3 = ADDshare_recon(party_id, netio, &intermediate.gamma2);
         // auto recon5 = ADDshare_recon(party_id, netio, &b);
-        // std::cout << "b recon: " << (uint64_t)recon5 << std::endl;
+        // std::cout << "d_first_bit[0] recon: " << (uint64_t)recon5_1 << std::endl;
+        // std::cout << "d_first_bit[1] recon: " << (uint64_t)recon5_2 << std::endl;
+        // std::cout << "gamma2 recon: " << (uint64_t)recon5_3 << std::endl;
+        // std::cout << "b recon: " << (uint64_t)recon5 << std::endl << std::endl;
         // auto recon6 = ADDshare_recon(party_id, netio, &a0);
         // std::cout << "a0 recon: " << (uint64_t)recon6 << std::endl;
         // auto recon7 = ADDshare_recon(party_id, netio, &a1);
@@ -184,5 +199,6 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         // std::cout << "a1_minus_a0 recon: " << (uint64_t)recon8 << std::endl;
         // auto recon9 = ADDshare_recon(party_id, netio, &intermediate.gamma3);
         // std::cout << "gamma3 recon: " << (uint64_t)recon9 << std::endl;
+        // std::cout << std::endl;
     }
 }

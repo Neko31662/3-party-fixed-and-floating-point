@@ -28,6 +28,24 @@ constexpr static inline int highest_bit_pos(uint64_t x) {
     return pos;
 }
 
+constexpr static inline int nxt_prime(uint x) {
+    assert(x <= ShareValue_BitLength);
+    auto is_prime = [](int n) {
+        if (n <= 1)
+            return false;
+        for (int i = 2; i * i <= n; i++) {
+            if (n % i == 0)
+                return false;
+        }
+        return true;
+    };
+    x++;
+    while (!is_prime(x)) {
+        x++;
+    }
+    return x;
+}
+
 struct encoded_msg {
     std::vector<bool> data;
     int read_pos = 0;
@@ -94,3 +112,16 @@ struct encoded_msg {
 
     inline size_t get_bitlen() { return data.size(); }
 };
+
+template <typename T> std::vector<T *> make_ptr_vec(const std::vector<T> &vec) {
+    std::vector<T *> ptrs;
+    for (const auto &item : vec) {
+        ptrs.push_back(&item);
+    }
+    return ptrs;
+}
+
+template <typename T, typename... Ts> std::vector<T *> make_ptr_vec(T &first, Ts &...rest) {
+    using PtrT = std::add_pointer_t<T>;
+    return std::vector<PtrT>{&first, &rest...};
+}

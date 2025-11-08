@@ -85,6 +85,29 @@ void MSSshare_share_from(const int secret_holder_id, const int party_id, NetIOMP
     }
 }
 
+template <int ell>
+void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare<ell> *s, ShareValue x) {
+#ifdef DEBUG_MODE
+    if (!s->has_preprocess) {
+        error("MSSshare_share_from must be invoked after MSSshare_preprocess");
+    }
+    s->has_shared = true;
+#endif
+
+    if (party_id == 0) {
+        ShareValue m = x;
+        m -= s->v1;
+        m -= s->v2;
+        m &= s->MASK;
+        // send m = x - r1 - r2
+        netio.send_data(1, &m, s->BYTELEN); // P0向P1发送的不store
+        netio.store_data(2, &m, s->BYTELEN);
+    } else {
+        netio.recv_data(0, &s->v1, s->BYTELEN);
+        s->v1 &= s->MASK;
+    }
+}
+
 template <int ell> void MSSshare_add_plain(const int party_id, MSSshare<ell> *s, ShareValue x) {
 #ifdef DEBUG_MODE
     if (!s->has_shared) {
@@ -97,32 +120,67 @@ template <int ell> void MSSshare_add_plain(const int party_id, MSSshare<ell> *s,
 }
 
 template <int ell>
-void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res,
-                                 const MSSshare<ell> *s1, const MSSshare<ell> *s2) {
-#ifdef DEBUG_MODE
-    if (!s1->has_preprocess || !s2->has_preprocess) {
-        error("MSSshare_add_res_preprocess requires s1 and s2 to have been preprocessed");
-    }
-    res->has_preprocess = true;
-#endif
-
-    res->v1 = (s1->v1 + s2->v1) & res->MASK;
-    res->v2 = (s1->v2 + s2->v2) & res->MASK;
+void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
+                                 MSSshare<ell> *s2) {
+    auto s_vec = make_ptr_vec(*s1, *s2);
+    auto coeff_vec = std::vector<int>{1, 1};
+    MSSshare_add_res_preprocess_multi(party_id, res, s_vec, coeff_vec);
 }
 
 template <int ell>
-void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res,
-                               const MSSshare<ell> *s1, const MSSshare<ell> *s2) {
-
+void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare_add_res<ell> *res,
+                                       std::vector<MSSshare<ell> *> &s_vec,
+                                       std::vector<int> &coeff_vec) {
 #ifdef DEBUG_MODE
-    if (!s1->has_shared || !s2->has_shared) {
-        error("MSSshare_add_res_calc_add requires both inputs to have been shared");
+    if (s_vec.size() != coeff_vec.size()) {
+        error("MSSshare_add_res_preprocess_multi: size of s_vec and coeff_vec must be equal");
+    }
+    for (size_t i = 0; i < s_vec.size(); i++) {
+        if (!s_vec[i]->has_preprocess) {
+            error("MSSshare_add_res_preprocess_multi: all shares must have been preprocessed");
+        }
+    }
+    res->has_preprocess = true;
+#endif
+    res->v1 = 0;
+    res->v2 = 0;
+    for (size_t i = 0; i < s_vec.size(); i++) {
+        res->v1 = (res->v1 + coeff_vec[i] * s_vec[i]->v1) & res->MASK;
+        res->v2 = (res->v2 + coeff_vec[i] * s_vec[i]->v2) & res->MASK;
+    }
+}
+
+template <int ell>
+void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
+                               MSSshare<ell> *s2) {
+    auto s_vec = make_ptr_vec(*s1, *s2);
+    auto coeff_vec = std::vector<int>{1, 1};
+    MSSshare_add_res_calc_add_multi(party_id, res, s_vec, coeff_vec);
+}
+
+template <int ell>
+void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare_add_res<ell> *res,
+                                     std::vector<MSSshare<ell> *> &s_vec,
+                                     std::vector<int> &coeff_vec) {
+#ifdef DEBUG_MODE
+    if (s_vec.size() != coeff_vec.size()) {
+        error("MSSshare_add_res_calc_add_multi: size of s_vec and coeff_vec must be equal");
+    }
+    for (size_t i = 0; i < s_vec.size(); i++) {
+        if (!s_vec[i]->has_shared) {
+            error("MSSshare_add_res_calc_add_multi: all shares must have been shared");
+        }
     }
     res->has_shared = true;
 #endif
+    if (party_id == 0) {
+        return;
+    }
 
-    res->v1 = (s1->v1 + s2->v1) & res->MASK;
-    res->v2 = (s1->v2 + s2->v2) & res->MASK;
+    res->v1 = 0;
+    for (size_t i = 0; i < s_vec.size(); i++) {
+        res->v1 = (res->v1 + coeff_vec[i] * s_vec[i]->v1) & res->MASK;
+    }
 }
 
 template <int ell>

@@ -6,33 +6,40 @@
 #include "utils/prg_sync.h"
 
 // 这里的加法分享是P1和P2之间的加法分享，P0起第三方辅助作用
-template <int ell> class ADDshare {
+template <int ell, typename ShareType = ShareValue> class ADDshare {
   public:
-    LongShareValue v;
+    ShareType v;
 #ifdef DEBUG_MODE
     bool has_shared = false;
 #endif
-    static const LongShareValue MASK;
+    static const ShareType MASK;
     static const int BYTELEN;
+    ADDshare() {
+        if (ell > sizeof(ShareType) * 8) {
+            error("ADDshare: ell exceeds ShareType bit length " +
+                  std::to_string(sizeof(ShareType) * 8));
+        }
+    }
 };
 
-template <int ell> class ADDshare_mul_res : public ADDshare<ell> {
+template <int ell, typename ShareType = ShareValue>
+class ADDshare_mul_res : public ADDshare<ell, ShareType> {
   public:
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
-    using ADDshare<ell>::has_shared;
+    using ADDshare<ell, ShareType>::has_shared;
 #endif
-    using ADDshare<ell>::MASK;
-    using ADDshare<ell>::BYTELEN;
-    using ADDshare<ell>::v;
+    using ADDshare<ell, ShareType>::MASK;
+    using ADDshare<ell, ShareType>::BYTELEN;
+    using ADDshare<ell, ShareType>::v;
 
-    LongShareValue x, y, z;
+    ShareType x, y, z;
 };
 
-template <int ell>
-const LongShareValue ADDshare<ell>::MASK =
-    (ell == ShareValue_BitLength) ? ~LongShareValue(0) : ((LongShareValue(1) << ell) - 1);
-template <int ell> const int ADDshare<ell>::BYTELEN = (ell + 7) / 8;
+template <int ell, typename ShareType>
+const ShareType ADDshare<ell, ShareType>::MASK =
+    (ell == ShareValue_BitLength) ? ~ShareType(0) : ((ShareType(1) << ell) - 1);
+template <int ell, typename ShareType> const int ADDshare<ell, ShareType>::BYTELEN = (ell + 7) / 8;
 
 // ===============================================================
 // ======================= implementation ========================
@@ -49,9 +56,15 @@ template <int ell> const int ADDshare<ell>::BYTELEN = (ell + 7) / 8;
  * @param s: 存储分享结果的ADDshare对象指针
  * @param x: 待分享的秘密值，仅secret_holder_id方提供有效值
  */
-template <int ell>
+template <int ell, typename ShareType>
 void ADDshare_share_from(const int secret_holder_id, const int party_id, std::vector<PRGSync> &PRGs,
-                         NetIOMP &netio, ADDshare<ell> *s, LongShareValue x);
+                         NetIOMP &netio, ADDshare<ell, ShareType> *s, ShareType x);
+
+/*与ADDshare_share_from类似，但将分享结果存储在netio的缓存中，等待后续发送，此时secret_holder_id必须为0
+ */
+template <int ell, typename ShareType>
+void ADDshare_share_from_store(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                               ADDshare<ell, ShareType> *s, ShareType x);
 
 /* 预处理ADDshare_mul_res对象，由P0为P1和P2生成Beaver三元组
  * @param party_id: 参与方id，0/1/2
@@ -62,9 +75,9 @@ void ADDshare_share_from(const int secret_holder_id, const int party_id, std::ve
  * @param netio: 多方通信接口
  * @param res: 预处理的ADDshare_mul_res对象指针
  */
-template <int ell>
+template <int ell, typename ShareType>
 void ADDshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                 ADDshare_mul_res<ell> *res);
+                                 ADDshare_mul_res<ell, ShareType> *res);
 
 /* 计算两个ADDshare的乘法结果，结果存储在res中，仅P1和P2参与计算
  * @param party_id: 参与方id，0/1/2
@@ -73,17 +86,18 @@ void ADDshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs,
  * @param s1: 第一个加法分享对象指针
  * @param s2: 第二个加法分享对象指针
  */
-template <int ell>
-void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio, ADDshare_mul_res<ell> *res,
-                               ADDshare<ell> *s1, ADDshare<ell> *s2);
+template <int ell, typename ShareType>
+void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio,
+                               ADDshare_mul_res<ell, ShareType> *res, ADDshare<ell, ShareType> *s1,
+                               ADDshare<ell, ShareType> *s2);
 
 /* 重构ADDshare对象，返回重构后的秘密值，仅P1,P2参与重构
  * @param party_id: 参与方id，0/1/2
  * @param netio: 多方通信接口
  * @param s: 待重构的ADDshare对象指针
  */
-template <int ell>
-LongShareValue ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell> *s);
+template <int ell, typename ShareType>
+ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell, ShareType> *s);
 
 /* ADDshare_mul_res_cal_mult的向量化版本
  * @param party_id: 参与方id，0/1/2
@@ -92,10 +106,10 @@ LongShareValue ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell> 
  * @param s1: 第一个加法分享对象指针
  * @param s2: 第二个加法分享对象指针
  */
-template <int ell>
+template <int ell, typename ShareType>
 void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
-                                   const std::vector<ADDshare_mul_res<ell> *> &res,
-                                   const std::vector<ADDshare<ell> *> &s1,
-                                   const std::vector<ADDshare<ell> *> &s2);
+                                   const std::vector<ADDshare_mul_res<ell, ShareType> *> &res,
+                                   const std::vector<ADDshare<ell, ShareType> *> &s1,
+                                   const std::vector<ADDshare<ell, ShareType> *> &s2);
 
 #include "protocol/addictive_share.tpp"

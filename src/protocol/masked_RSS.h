@@ -25,7 +25,6 @@ template <int ell> class MSSshare {
     }
 
     virtual ~MSSshare() = default;
-
 };
 
 template <int ell> class MSSshare_add_res : public MSSshare<ell> {
@@ -98,8 +97,19 @@ void MSSshare_preprocess(const int secret_holder_id, const int party_id, std::ve
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
 template <int ell>
-void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res,
-                                 const MSSshare<ell> *s1, const MSSshare<ell> *s2);
+void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
+                                 MSSshare<ell> *s2);
+
+/* 预处理MSSshare_add_res对象，结果为多个分享对象的带系数累加
+ * @param party_id: 参与方id，0/1/2
+ * @param res: 预处理的MSSshare_add_res对象指针
+ * @param s_vec: 多个作为加法输入的分享对象的指针数组
+ * @param coeff_vec: 对应的明文系数数组，可以是负数
+ */
+template <int ell>
+void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare_add_res<ell> *res,
+                                       std::vector<MSSshare<ell> *> &s_vec,
+                                       std::vector<int> &coeff_vec);
 
 /* 预处理MSSshare_mul_res对象
  * @param party_id: 参与方id，0/1/2
@@ -128,6 +138,11 @@ template <int ell>
 void MSSshare_share_from(const int secret_holder_id, const int party_id, NetIOMP &netio,
                          MSSshare<ell> *s, ShareValue x);
 
+/*与MSSshare_share_from类似，但将分享结果存储在netio的缓存中，等待后续发送，此时secret_holder_id必须为0
+ */
+template <int ell>
+void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare<ell> *s, ShareValue x);
+
 /*明文加法
  * @param party_id: 参与方id，0/1/2
  * @param s: 存储分享结果的MSSshare对象指针
@@ -142,8 +157,19 @@ template <int ell> void MSSshare_add_plain(const int party_id, MSSshare<ell> *s,
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
 template <int ell>
-void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res,
-                               const MSSshare<ell> *s1, const MSSshare<ell> *s2);
+void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
+                               MSSshare<ell> *s2);
+
+/*密文加法，带系数累加
+ * @param party_id: 参与方id，0/1/2
+ * @param res: 作为结果输出的MSSshare_add_res对象指针
+ * @param s_vec: 多个作为加法输入的分享对象的指针数组
+ * @param coeff_vec: 对应的明文系数数组，可以是负数
+ */
+template <int ell>
+void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare_add_res<ell> *res,
+                                     std::vector<MSSshare<ell> *> &s_vec,
+                                     std::vector<int> &coeff_vec);
 
 /*密文乘法
  * @param party_id: 参与方id，0/1/2

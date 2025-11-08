@@ -65,6 +65,14 @@ add_executable(MSS_basic_test
 setup_target(MSS_basic_test)
 target_link_libraries(MSS_basic_test pthread gmp)
 
+# MSS加法功能测试
+add_executable(MSS_add_test
+    ${COMMON_SOURCES}
+    src/test/MSS_add_test.cpp
+)
+setup_target(MSS_add_test)
+target_link_libraries(MSS_add_test pthread gmp)
+
 # 定点数功能测试
 add_executable(fixed_point_test
     ${COMMON_SOURCES}
@@ -112,6 +120,22 @@ add_executable(shift_test
 )
 setup_target(shift_test)
 target_link_libraries(shift_test pthread gmp)
+
+# 最高位提取协议测试
+add_executable(sign_test
+    ${COMMON_SOURCES}
+    src/test/sign_test.cpp
+)
+setup_target(sign_test)
+target_link_libraries(sign_test pthread gmp)
+
+# wrap协议测试
+add_executable(wrap_test
+    ${COMMON_SOURCES}
+    src/test/wrap_test.cpp
+)
+setup_target(wrap_test)
+target_link_libraries(wrap_test pthread gmp)
 
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest

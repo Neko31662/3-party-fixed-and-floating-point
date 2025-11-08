@@ -1,53 +1,72 @@
-template <int ell>
+template <int ell, typename ShareType>
 void ADDshare_share_from(const int secret_holder_id, const int party_id, std::vector<PRGSync> &PRGs,
-                         NetIOMP &netio, ADDshare<ell> *s, LongShareValue x) {
+                         NetIOMP &netio, ADDshare<ell, ShareType> *s, ShareType x) {
 #ifdef DEBUG_MODE
     s->has_shared = true;
 #endif
     if (secret_holder_id == 0) {
         if (party_id == 0 || party_id == 1) {
-            PRGs[0].gen_random_data(&s->v, ADDshare<ell>::BYTELEN);
-            s->v &= ADDshare<ell>::MASK;
+            PRGs[0].gen_random_data(&s->v, s->BYTELEN);
+            s->v &= s->MASK;
         }
         if (party_id == 0) {
-            LongShareValue temp = (x - s->v) & ADDshare<ell>::MASK;
-            netio.send_data(2, &temp, ADDshare<ell>::BYTELEN);
+            ShareType temp = (x - s->v) & s->MASK;
+            netio.send_data(2, &temp, s->BYTELEN);
         } else if (party_id == 2) {
-            netio.recv_data(0, &s->v, ADDshare<ell>::BYTELEN);
-            s->v &= ADDshare<ell>::MASK;
+            netio.recv_data(0, &s->v, s->BYTELEN);
+            s->v &= s->MASK;
         }
     } else {
         int other_party = 3 - secret_holder_id;
         if (party_id == secret_holder_id || party_id == 0) {
             int prg_idx = (party_id == 0) ? (secret_holder_id - 1) : 0;
-            PRGs[prg_idx].gen_random_data(&s->v, ADDshare<ell>::BYTELEN);
-            s->v &= ADDshare<ell>::MASK;
+            PRGs[prg_idx].gen_random_data(&s->v, s->BYTELEN);
+            s->v &= s->MASK;
         }
         if (party_id == secret_holder_id) {
-            LongShareValue temp = (x - s->v) & ADDshare<ell>::MASK;
-            netio.send_data(other_party, &temp, ADDshare<ell>::BYTELEN);
+            ShareType temp = (x - s->v) & s->MASK;
+            netio.send_data(other_party, &temp, s->BYTELEN);
         } else if (party_id == other_party) {
-            netio.recv_data(secret_holder_id, &s->v, ADDshare<ell>::BYTELEN);
-            s->v &= ADDshare<ell>::MASK;
+            netio.recv_data(secret_holder_id, &s->v, s->BYTELEN);
+            s->v &= s->MASK;
         }
     }
 }
 
-template <int ell>
+template <int ell, typename ShareType>
+void ADDshare_share_from_store(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                               ADDshare<ell, ShareType> *s, ShareType x) {
+#ifdef DEBUG_MODE
+    s->has_shared = true;
+#endif
+    if (party_id == 0 || party_id == 1) {
+        PRGs[0].gen_random_data(&s->v, s->BYTELEN);
+        s->v &= s->MASK;
+    }
+    if (party_id == 0) {
+        ShareType temp = (x - s->v) & s->MASK;
+        netio.store_data(2, &temp, s->BYTELEN);
+    } else if (party_id == 2) {
+        netio.recv_data(0, &s->v, s->BYTELEN);
+        s->v &= s->MASK;
+    }
+}
+
+template <int ell, typename ShareType>
 void ADDshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                 ADDshare_mul_res<ell> *res) {
+                                 ADDshare_mul_res<ell, ShareType> *res) {
 #ifdef DEBUG_MODE
     res->has_preprocess = true;
 #endif
-    LongShareValue tmpx, tmpy, tmpz;
+    ShareType tmpx, tmpy, tmpz;
     if (party_id == 0 || party_id == 1) {
         // P0和P1同步生成x,y,z的P1持有的份额
-        PRGs[0].gen_random_data(&res->x, ADDshare<ell>::BYTELEN);
-        PRGs[0].gen_random_data(&res->y, ADDshare<ell>::BYTELEN);
-        PRGs[0].gen_random_data(&res->z, ADDshare<ell>::BYTELEN);
-        res->x &= ADDshare<ell>::MASK;
-        res->y &= ADDshare<ell>::MASK;
-        res->z &= ADDshare<ell>::MASK;
+        PRGs[0].gen_random_data(&res->x, res->BYTELEN);
+        PRGs[0].gen_random_data(&res->y, res->BYTELEN);
+        PRGs[0].gen_random_data(&res->z, res->BYTELEN);
+        res->x &= res->MASK;
+        res->y &= res->MASK;
+        res->z &= res->MASK;
         if (party_id == 0) {
             tmpx = res->x;
             tmpy = res->y;
@@ -57,27 +76,28 @@ void ADDshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs,
 
     if (party_id == 0 || party_id == 2) {
         // P0和P2同步生成x,y的P2持有的份额
-        PRGs[(party_id + 1) % 3].gen_random_data(&res->x, ADDshare<ell>::BYTELEN);
-        PRGs[(party_id + 1) % 3].gen_random_data(&res->y, ADDshare<ell>::BYTELEN);
-        res->x &= ADDshare<ell>::MASK;
-        res->y &= ADDshare<ell>::MASK;
+        PRGs[(party_id + 1) % 3].gen_random_data(&res->x, res->BYTELEN);
+        PRGs[(party_id + 1) % 3].gen_random_data(&res->y, res->BYTELEN);
+        res->x &= res->MASK;
+        res->y &= res->MASK;
     }
 
     if (party_id == 0) {
-        LongShareValue temp = (tmpx + res->x) * (tmpy + res->y);
+        ShareType temp = (tmpx + res->x) * (tmpy + res->y);
         temp -= res->z;
-        temp &= ADDshare<ell>::MASK;
-        netio.store_data(2, &temp, ADDshare<ell>::BYTELEN);
+        temp &= res->MASK;
+        netio.store_data(2, &temp, res->BYTELEN);
         // 之后需要调用send_data将temp发送给P2
     } else if (party_id == 2) {
-        netio.recv_data(0, &res->z, ADDshare<ell>::BYTELEN);
-        res->z &= ADDshare<ell>::MASK;
+        netio.recv_data(0, &res->z, res->BYTELEN);
+        res->z &= res->MASK;
     }
 }
 
-template <int ell>
-void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio, ADDshare_mul_res<ell> *res,
-                               ADDshare<ell> *s1, ADDshare<ell> *s2) {
+template <int ell, typename ShareType>
+void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio,
+                               ADDshare_mul_res<ell, ShareType> *res, ADDshare<ell, ShareType> *s1,
+                               ADDshare<ell, ShareType> *s2) {
 #ifdef DEBUG_MODE
     if (!s1->has_shared || !s2->has_shared) {
         error("ADDshare_mul_res_cal_mult requires both inputs to have been shared");
@@ -88,38 +108,38 @@ void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio, ADDshare_mul_
         return;
     }
 
-    LongShareValue d = (s1->v - res->x) & ADDshare<ell>::MASK;
-    LongShareValue e = (s2->v - res->y) & ADDshare<ell>::MASK;
+    ShareType d = (s1->v - res->x) & res->MASK;
+    ShareType e = (s2->v - res->y) & res->MASK;
 
     // P1和P2重构d和e，P0不参与
-    LongShareValue d_sum, e_sum;
+    ShareType d_sum, e_sum;
     if (party_id == 1) {
-        netio.send_data(2, &d, ADDshare<ell>::BYTELEN);
-        netio.send_data(2, &e, ADDshare<ell>::BYTELEN);
+        netio.send_data(2, &d, res->BYTELEN);
+        netio.send_data(2, &e, res->BYTELEN);
 
-        netio.recv_data(2, &d_sum, ADDshare<ell>::BYTELEN);
-        netio.recv_data(2, &e_sum, ADDshare<ell>::BYTELEN);
+        netio.recv_data(2, &d_sum, res->BYTELEN);
+        netio.recv_data(2, &e_sum, res->BYTELEN);
     } else if (party_id == 2) {
-        netio.recv_data(1, &d_sum, ADDshare<ell>::BYTELEN);
-        netio.recv_data(1, &e_sum, ADDshare<ell>::BYTELEN);
+        netio.recv_data(1, &d_sum, res->BYTELEN);
+        netio.recv_data(1, &e_sum, res->BYTELEN);
 
-        netio.send_data(1, &d, ADDshare<ell>::BYTELEN);
-        netio.send_data(1, &e, ADDshare<ell>::BYTELEN);
+        netio.send_data(1, &d, res->BYTELEN);
+        netio.send_data(1, &e, res->BYTELEN);
     }
-    d_sum = (d_sum + d) & ADDshare<ell>::MASK;
-    e_sum = (e_sum + e) & ADDshare<ell>::MASK;
+    d_sum = (d_sum + d) & res->MASK;
+    e_sum = (e_sum + e) & res->MASK;
 
-    res->v = (res->z + (d_sum * res->y) + (e_sum * res->x)) & ADDshare<ell>::MASK;
+    res->v = (res->z + (d_sum * res->y) + (e_sum * res->x)) & res->MASK;
     if (party_id == 1) {
-        res->v = (res->v + (d_sum * e_sum)) & ADDshare<ell>::MASK;
+        res->v = (res->v + (d_sum * e_sum)) & res->MASK;
     }
 }
 
-template <int ell>
+template <int ell, typename ShareType>
 void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
-                                   const std::vector<ADDshare_mul_res<ell> *> &res,
-                                   const std::vector<ADDshare<ell> *> &s1,
-                                   const std::vector<ADDshare<ell> *> &s2) {
+                                   const std::vector<ADDshare_mul_res<ell, ShareType> *> &res,
+                                   const std::vector<ADDshare<ell, ShareType> *> &s1,
+                                   const std::vector<ADDshare<ell, ShareType> *> &s2) {
     int len = res.size();
 #ifdef DEBUG_MODE
     if (s1.size() != len || s2.size() != len) {
@@ -136,12 +156,12 @@ void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
         return;
     }
 
-    std::vector<LongShareValue> d(len), e(len);
+    std::vector<ShareType> d(len), e(len);
     for (int i = 0; i < len; i++) {
-        d[i] = (s1[i]->v - res[i]->x) & ADDshare<ell>::MASK;
-        e[i] = (s2[i]->v - res[i]->y) & ADDshare<ell>::MASK;
+        d[i] = (s1[i]->v - res[i]->x) & res[i]->MASK;
+        e[i] = (s2[i]->v - res[i]->y) & res[i]->MASK;
     }
-    std::vector<LongShareValue> d_sum(len), e_sum(len);
+    std::vector<ShareType> d_sum(len), e_sum(len);
 
     // 发送和接收信息
     encoded_msg msg1, msg2;
@@ -162,21 +182,21 @@ void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
     }
     msg2.from_char_array(buffer_recv.data(), buffer_recv.size());
     for (int i = 0; i < len; i++) {
-        LongShareValue tmp_d, tmp_e;
+        ShareType tmp_d, tmp_e;
         msg2.read_msg((char *)&tmp_d, ell);
         msg2.read_msg((char *)&tmp_e, ell);
-        d_sum[i] = (tmp_d + d[i]) & ADDshare<ell>::MASK;
-        e_sum[i] = (tmp_e + e[i]) & ADDshare<ell>::MASK;
+        d_sum[i] = (tmp_d + d[i]) & res[i]->MASK;
+        e_sum[i] = (tmp_e + e[i]) & res[i]->MASK;
 
-        res[i]->v = (res[i]->z + (d_sum[i] * res[i]->y) + (e_sum[i] * res[i]->x)) & ADDshare<ell>::MASK;
+        res[i]->v = (res[i]->z + (d_sum[i] * res[i]->y) + (e_sum[i] * res[i]->x)) & res[i]->MASK;
         if (party_id == 1) {
-            res[i]->v = (res[i]->v + (d_sum[i] * e_sum[i])) & ADDshare<ell>::MASK;
+            res[i]->v = (res[i]->v + (d_sum[i] * e_sum[i])) & res[i]->MASK;
         }
     }
 }
 
-template <int ell>
-LongShareValue ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell> *s) {
+template <int ell, typename ShareType>
+ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell, ShareType> *s) {
 #ifdef DEBUG_MODE
     if (!s->has_shared) {
         error("ADDshare_recon requires the input to have been shared");
@@ -185,14 +205,14 @@ LongShareValue ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell> 
     if (party_id == 0) {
         return 0;
     }
-    LongShareValue total;
+    ShareType total;
     if (party_id == 1) {
-        netio.send_data(2, &s->v, ADDshare<ell>::BYTELEN);
-        netio.recv_data(2, &total, ADDshare<ell>::BYTELEN);
+        netio.send_data(2, &s->v, s->BYTELEN);
+        netio.recv_data(2, &total, s->BYTELEN);
     } else if (party_id == 2) {
-        netio.recv_data(1, &total, ADDshare<ell>::BYTELEN);
-        netio.send_data(1, &s->v, ADDshare<ell>::BYTELEN);
+        netio.recv_data(1, &total, s->BYTELEN);
+        netio.send_data(1, &s->v, s->BYTELEN);
     }
-    total = (total + s->v) & ADDshare<ell>::MASK;
+    total = (total + s->v) & s->MASK;
     return total;
 }

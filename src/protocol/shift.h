@@ -14,11 +14,11 @@ template <int ell> struct PI_shift_intermediate {
     bool has_preprocess = false;
 #endif
     ADDshare_mul_res<ell> gamma1, gamma2, gamma3;
-    ADDshare_mul_res<EXPANDED_ELL(ell)> d_prime;
+    ADDshare_mul_res<EXPANDED_ELL(ell), LongShareValue> d_prime;
     MSSshare<ell> two_pow_k;
 };
 
-/* 预处理PI_shift_intermediate对象
+/* 预处理PI_shift_intermediate对象和协议的输出
  * @param party_id: 参与方id，0/1/2
  * @param PRGs: 用于生成随机数的伪随机生成器数组，
  * P0.PRGs[0] <----sync----> P1.PRGs[0],
@@ -27,6 +27,7 @@ template <int ell> struct PI_shift_intermediate {
  * @param netio: 多方通信接口
  * @param intermediate: 预处理的PI_shift_intermediate对象引用
  * @param input_x: 作为协议输入的MSSshare对象指针，需要已经预处理完成
+ * @param output_res: 协议输出的对象的指针
  */
 template <int ell>
 void PI_shift_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,

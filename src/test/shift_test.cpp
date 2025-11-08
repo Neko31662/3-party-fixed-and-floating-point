@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
     vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
 
     for (int k = 0; k < ell; ++k) {
+        ShareValue plain_x = 24678;
+
         PI_shift_intermediate<ell> intermediate;
         ADDshare<LOG_1(ell)> k_share;
         MSSshare<ell> x_share;
@@ -43,9 +45,9 @@ int main(int argc, char **argv) {
         }
 
         // share
-        LongShareValue k_value = k;
+        ShareValue k_value = k;
         ADDshare_share_from(0, party_id, PRGs, *netio, &k_share, k_value);
-        MSSshare_share_from(0, party_id, *netio, &x_share, 1);
+        MSSshare_share_from(0, party_id, *netio, &x_share, plain_x);
 
         // compute
         PI_shift(party_id, PRGs, *netio, intermediate, &x_share, &k_share, &output_res);
@@ -54,8 +56,10 @@ int main(int argc, char **argv) {
         ShareValue result;
         result = MSSshare_recon(party_id, *netio, &output_res);
         cout << "k = " << k << ", result = " << result << endl;
-        if (result != (1U << k)) {
+        if (result != ((plain_x << k) & output_res.MASK)) {
             cout << "Error in PI_shift!" << endl;
+            cout << "Expected: " << ((plain_x << k) & output_res.MASK) << endl;
+            cout << "Actual: " << result << endl;
             exit(-1);
         }
     }
