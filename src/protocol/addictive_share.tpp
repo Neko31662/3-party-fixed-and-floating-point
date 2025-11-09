@@ -216,3 +216,28 @@ ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell, Share
     total = (total + s->v) & s->MASK;
     return total;
 }
+
+template <int ell> inline void ADDshare_from_p(ADDshare<ell> *to, ADDshare_p *from) {
+#ifdef DEBUG_MODE
+    if (from->p != to->MASK + 1) {
+        error("ADDshare_from_p: modulus mismatch");
+    }
+    to->has_shared = from->has_shared;
+#endif
+    to->v = from->v;
+}
+
+template <int ell>
+inline void ADDshare_mul_res_from_p(ADDshare_mul_res<ell> *to, ADDshare_p_mul_res *from) {
+#ifdef DEBUG_MODE
+    if (from->p != to->MASK + 1) {
+        error("ADDshare_mul_res_from_p: modulus mismatch");
+    }
+    to->has_preprocess = from->has_preprocess;
+    to->has_shared = from->has_shared;
+#endif
+    to->v = from->v;
+    to->x = from->x;
+    to->y = from->y;
+    to->z = from->z;
+}

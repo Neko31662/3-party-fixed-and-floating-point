@@ -4,6 +4,7 @@
 #include "utils/misc.h"
 #include "utils/multi_party_net_io.h"
 #include "utils/prg_sync.h"
+#include "protocol/masked_RSS_p.h"
 
 template <int ell> class MSSshare {
   public:
@@ -27,7 +28,7 @@ template <int ell> class MSSshare {
     virtual ~MSSshare() = default;
 };
 
-template <int ell> class MSSshare_add_res : public MSSshare<ell> {
+template <int ell> class MSSshare_add_res : virtual public MSSshare<ell> {
   public:
 #ifdef DEBUG_MODE
     using MSSshare<ell>::has_preprocess;
@@ -41,7 +42,7 @@ template <int ell> class MSSshare_add_res : public MSSshare<ell> {
     virtual ~MSSshare_add_res() = default;
 };
 
-template <int ell> class MSSshare_mul_res : public MSSshare<ell> {
+template <int ell> class MSSshare_mul_res : virtual public MSSshare<ell> {
   public:
 #ifdef DEBUG_MODE
     using MSSshare<ell>::has_preprocess;
@@ -182,6 +183,10 @@ template <int ell>
 inline void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_res<ell> *res,
                                const MSSshare<ell> *s1, const MSSshare<ell> *s2);
 
+template <int ell> inline void MSSshare_from_p(MSSshare<ell> *to, MSSshare_p *from);
+
+template <int ell>
+inline void MSSshare_mul_res_from_p(MSSshare_mul_res<ell> *to, MSSshare_p_mul_res *from);
 #include "protocol/masked_RSS.tpp"
 
 // // 压缩函数：将vector<ShareValue>的前ell比特压缩到string

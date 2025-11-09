@@ -145,6 +145,14 @@ add_executable(convert_test
 setup_target(convert_test)
 target_link_libraries(convert_test pthread gmp)
 
+# align协议测试
+add_executable(align_test
+    ${COMMON_SOURCES}
+    src/test/align_test.cpp
+)
+setup_target(align_test)
+target_link_libraries(align_test pthread gmp)
+
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest
 #     ${COMMON_SOURCES}

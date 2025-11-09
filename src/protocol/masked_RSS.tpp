@@ -246,3 +246,29 @@ void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_
         res->v1 = (recv_temp + temp) & res->MASK;
     }
 }
+
+template <int ell> inline void MSSshare_from_p(MSSshare<ell> *to, MSSshare_p *from) {
+#ifdef DEBUG_MODE
+    if (from->p != to->MASK + 1) {
+        error("MSSshare_from_p: modulus mismatch");
+    }
+    to->has_preprocess = from->has_preprocess;
+    to->has_shared = from->has_shared;
+#endif
+    to->v1 = from->v1;
+    to->v2 = from->v2;
+}
+
+template <int ell>
+inline void MSSshare_mul_res_from_p(MSSshare_mul_res<ell> *to, MSSshare_p_mul_res *from) {
+#ifdef DEBUG_MODE
+    if (from->p != to->MASK + 1) {
+        error("MSSshare_mul_res_from_p: modulus mismatch");
+    }
+    to->has_preprocess = from->has_preprocess;
+    to->has_shared = from->has_shared;
+#endif
+    to->v1 = from->v1;
+    to->v2 = from->v2;
+    to->v3 = from->v3;
+}
