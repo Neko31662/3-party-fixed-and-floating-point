@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# 测试 multi_party_net_io 的脚本
-# 同时启动多方通信测试
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <test_program_name>"

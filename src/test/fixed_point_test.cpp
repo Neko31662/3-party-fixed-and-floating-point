@@ -1,123 +1,104 @@
-// #include "protocol/fixed-point.h"
-// #include <chrono>
-// #include <iostream>
-// #include <string>
-// #include <vector>
+#include "protocol/fixed_point.h"
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <vector>
 
-// using namespace std;
-// const int BASE_PORT = 12345;
-// const int NUM_PARTIES = 3;
-// const int l = 32;
-// const int lf = 16;
+using namespace std;
+const int BASE_PORT = 12345;
+const int NUM_PARTIES = 3;
+const int test_nums = 10000;
+const int li = 16;
+const int lf = 16;
+const int l_res = li + lf + 1;
 
-// uint64_t secret[10] = {11111, 22222, 33333, 44444, 55555, 66666, 77777};
+uint64_t secret[10] = {11111, 22222, 33333, 44444, 55555, 66666, 77777};
 
-// int main(int argc, char **argv) {
-//     // net io
-//     int party_id = atoi(argv[1]);
-//     NetIOMP *netio = new NetIOMP(party_id, BASE_PORT, NUM_PARTIES);
-//     netio->sync();
-//     log("Phase 1");
+int main(int argc, char **argv) {
+    // net io
+    int party_id = atoi(argv[1]);
+    NetIOMP *netio = new NetIOMP(party_id, BASE_PORT, NUM_PARTIES);
+    netio->sync();
 
-//     // setup prg
-//     block seed1;
-//     block seed2;
-//     if (party_id == 0) {
-//         seed1 = gen_seed();
-//         seed2 = gen_seed();
-//         netio->send_data(1, &seed1, sizeof(block));
-//         netio->send_data(2, &seed2, sizeof(block));
-//         netio->flush_all();
-//     } else if (party_id == 1) {
-//         netio->recv_data(0, &seed1, sizeof(block));
-//     } else if (party_id == 2) {
-//         netio->recv_data(0, &seed1, sizeof(block));
-//     }
-//     std::vector<std::shared_ptr<PRGSync>> PRGs(2);
-//     PRGs[0] = std::make_shared<PRGSync>(&seed1);
-//     PRGs[1] = std::make_shared<PRGSync>(&seed2);
-//     log("Phase 2");
+    // setup prg
+    block seed1;
+    block seed2;
+    if (party_id == 0) {
+        seed1 = gen_seed();
+        seed2 = gen_seed();
+        netio->send_data(1, &seed1, sizeof(block));
+        netio->send_data(2, &seed2, sizeof(block));
+    } else if (party_id == 1) {
+        netio->recv_data(0, &seed1, sizeof(block));
+        seed2 = gen_seed();
+        netio->send_data(2, &seed2, sizeof(block));
+    } else if (party_id == 2) {
+        netio->recv_data(0, &seed1, sizeof(block));
+        netio->recv_data(1, &seed2, sizeof(block));
+    }
+    vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
+    auto private_seed = gen_seed();
+    auto private_PRG = PRGSync(&private_seed);
 
-//     // shares allocation
-//     int len = 20;
-//     set_fixed_point_share_party_id<l, lf>(party_id);
-//     std::vector<std::shared_ptr<fixed_point_share<l, lf>>> s(len);
-//     for (int i = 0; i < (int)s.size(); i++) {
-//         s[i] = std::make_shared<fixed_point_share<l, lf>>();
-//     }
-//     std::vector<std::shared_ptr<fixed_point_share_add_res<l, lf>>> s_add(len);
-//     for (int i = 0; i < (int)s.size(); i++) {
-//         s_add[i] = std::make_shared<fixed_point_share_add_res<l, lf>>();
-//     }
-//     log("Phase 3");
+    for (int test_i = 0; test_i < test_nums; test_i++) {
+        MSSshare<li + lf> x_share, y_share;
+        MSSshare<l_res> z_share;
+        PI_fixed_mult_intermediate<li, lf, l_res> intermediate;
 
-//     // preprocess
-//     //    i: 0, 1, 2, 3, 4, 5, 6
-//     // s[i]: a, b, c, d, e, f, g
-//     for (int i = 0; i < (int)s.size(); i++) {
-//         s[i]->preprocess(i % 3, PRGs);
-//     }
-//     s_add[0]->preprocess(s[0], s[1]);
-//     log("Phase 3.2");
+        // preprocess
+        MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
+        MSSshare_preprocess(0, party_id, PRGs, *netio, &y_share);
+        PI_fixed_mult_preprocess<li, lf, l_res>(party_id, PRGs, *netio, intermediate, &x_share,
+                                                &y_share, &z_share);
 
-//     // preprocess后需要调用这个
-//     if (party_id == 0) {
-//         netio->send_stored_data(2);
-//     }
-//     log("Phase 4");
+        if (party_id == 0) {
+            netio->send_stored_data(2);
+        }
 
-//     // share
-//     // 要按holder顺序发送，避免死锁
-//     for (int holder = 0; holder < 3; holder++) {
-//         for (int i = 0; i < 7; i++) {
-//             if (i % 3 == holder)
-//                 s[i]->share_from(i % 3, secret[i], *netio);
-//         }
-//         if (party_id == holder) {
-//             netio->send_stored_data_all();
-//         }
-//     }
+        // share
+        ShareValue x_plain, y_plain;
+        if (party_id == 0) {
+            private_PRG.gen_random_data(&x_plain, sizeof(ShareValue));
+            private_PRG.gen_random_data(&y_plain, sizeof(ShareValue));
+            x_plain &= (x_share.MASK >> 1);
+            x_plain -= (ShareValue(1) << (li + lf - 2));
+            y_plain &= (y_share.MASK >> 1);
+            y_plain -= (ShareValue(1) << (li + lf - 2));
+        }
+        MSSshare_share_from(0, party_id, *netio, &x_share, x_plain);
+        MSSshare_share_from(0, party_id, *netio, &y_share, y_plain);
 
-//     // calculate
-//     s_add[0]->calc_add(); // a + b
+        // compute
+        PI_fixed_mult<li, lf, l_res>(party_id, PRGs, *netio, intermediate, &x_share, &y_share,
+                                     &z_share);
 
-//     // reconstruct
-//     ShareValue rec[len];
-//     ShareValue rec_add[len];
-//     ShareValue rec_mul[len];
-//     for (int i = 0; i <= 6; i++) {
-//         rec[i] = s[i]->recon(*netio);
-//     }
-//     for (int i = 0; i <= 0; i++) {
-//         rec_add[i] = s_add[i]->recon(*netio);
-//     }
-//     // for (int i = 0; i <= 2; i++) {
-//     //     rec_mul[i] = s_mul[i]->recon(*netio);
-//     // }
-//     delete netio;
+        // reconstruct
+        ShareValue x_recon, y_recon, z_recon;
+        x_recon = MSSshare_recon(party_id, *netio, &x_share);
+        y_recon = MSSshare_recon(party_id, *netio, &y_share);
 
-//     // show result
-//     for (int i = 0; i <= 6; i++) {
-//         cout << "Reconstructed s[" << i << "]: " << (uint64_t)rec[i] << endl;
-//     }
-//     for (int i = 0; i <= 0; i++) {
-//         cout << "Reconstructed s_add[" << i << "]: " << (uint64_t)rec_add[i] << endl;
-//     }
-//     // for (int i = 0; i <= 2; i++) {
-//     //     cout << "Reconstructed s_mul[" << i << "]: " << rec_mul[i] << endl;
-//     // }
-//     ShareValue res = (secret[0] + secret[1]);
-//     cout << "Reconstructed result: " << (uint64_t)rec_add[0] << endl;
-//     cout << "Expected result: " << (uint64_t)res << endl;
-//     if (rec_add[0] == res) {
-//         cout << "Fixed point test passed!" << endl;
-//         return 0;
-//     } else {
-//         cout << "Fixed point test failed!" << endl;
-//         return 1;
-//     }
-// }
+        x_recon += (ShareValue(1) << (li + lf - 2));
+        x_recon &= x_share.MASK;
+        x_recon -= (ShareValue(1) << (li + lf - 2));
+        y_recon += (ShareValue(1) << (li + lf - 2));
+        y_recon &= y_share.MASK;
+        y_recon -= (ShareValue(1) << (li + lf - 2));
 
-int main() {
-    return 0;
+        z_recon = MSSshare_recon(party_id, *netio, &z_share);
+
+        ShareValue z_plain = ((LongShareValue)x_recon * y_recon) >> lf;
+        z_plain &= z_share.MASK;
+        ShareValue dif = z_plain > z_recon ? z_plain - z_recon : z_recon - z_plain;
+        if (dif > 1) {
+            cout << "x_recon: " << bitset<l_res>(x_recon) << endl;
+            cout << "y_recon: " << bitset<l_res>(y_recon) << endl;
+            cout << "z_recon: " << bitset<l_res>(z_recon) << endl;
+            cout << "z_plain: " << bitset<l_res>(z_plain) << endl;
+            cout << "Error: incorrect fixed-point multiplication at index " << test_i << endl;
+            exit(1);
+        }
+    }
+
+    cout << "PI_fixed_mult test passed!" << endl;
+    delete netio;
 }

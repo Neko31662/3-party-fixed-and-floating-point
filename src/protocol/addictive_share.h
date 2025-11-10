@@ -9,7 +9,7 @@
 // 这里的加法分享是P1和P2之间的加法分享，P0起第三方辅助作用
 template <int ell, typename ShareType = ShareValue> class ADDshare {
   public:
-    ShareType v;
+    ShareType v = 0;
 #ifdef DEBUG_MODE
     bool has_shared = false;
 #endif
@@ -34,7 +34,7 @@ class ADDshare_mul_res : public ADDshare<ell, ShareType> {
     using ADDshare<ell, ShareType>::BYTELEN;
     using ADDshare<ell, ShareType>::v;
 
-    ShareType x, y, z;
+    ShareType x = 0, y = 0, z = 0;
 };
 
 template <int ell, typename ShareType>

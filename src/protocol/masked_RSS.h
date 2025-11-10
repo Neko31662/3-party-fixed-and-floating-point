@@ -1,17 +1,17 @@
 #pragma once
 
 #include "config/config.h"
+#include "protocol/masked_RSS_p.h"
 #include "utils/misc.h"
 #include "utils/multi_party_net_io.h"
 #include "utils/prg_sync.h"
-#include "protocol/masked_RSS_p.h"
 
 template <int ell> class MSSshare {
   public:
     // For party 0, v1: r1, v2: r2
     // For party 1, v1: m , v2: r1
     // For party 2, v1: m , v2: r2
-    ShareValue v1, v2;
+    ShareValue v1 = 0, v2 = 0;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
     bool has_shared = false;
@@ -56,7 +56,7 @@ template <int ell> class MSSshare_mul_res : virtual public MSSshare<ell> {
     // For party 0, s3.v3 = [ (s1.r1 + s1.r2) * (s2.r1 + s2.r2) ]_1
     // For party 1, s3.v3 = [ (s1.r1 + s1.r2) * (s2.r1 + s2.r2) ]_1
     // For party 2, s3.v3 = [ (s1.r1 + s1.r2) * (s2.r1 + s2.r2) ]_2
-    ShareValue v3;
+    ShareValue v3 = 0;
 
     virtual ~MSSshare_mul_res() = default;
 };
@@ -75,7 +75,8 @@ template <int ell> const int MSSshare<ell>::BYTELEN = (ell + 7) / 8;
  * @param netio: 多方通信接口
  * @param s: 待重构的MSSshare对象指针
  */
-template <int ell> inline ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare<ell> *s);
+template <int ell>
+inline ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare<ell> *s);
 
 /* 预处理MSSshare对象
  * @param secret_holder_id: 秘密值持有方id，0/1,2，如果该对象之后不进行share_from，必须传入0
@@ -88,8 +89,8 @@ template <int ell> inline ShareValue MSSshare_recon(const int party_id, NetIOMP 
  * @param s: MSSshare对象指针
  */
 template <int ell>
-inline void MSSshare_preprocess(const int secret_holder_id, const int party_id, std::vector<PRGSync> &PRGs,
-                         NetIOMP &netio, MSSshare<ell> *s);
+inline void MSSshare_preprocess(const int secret_holder_id, const int party_id,
+                                std::vector<PRGSync> &PRGs, NetIOMP &netio, MSSshare<ell> *s);
 
 /* 预处理MSSshare_add_res对象
  * @param party_id: 参与方id，0/1/2
@@ -98,8 +99,8 @@ inline void MSSshare_preprocess(const int secret_holder_id, const int party_id, 
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
 template <int ell>
-inline void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
-                                 MSSshare<ell> *s2);
+inline void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res,
+                                        MSSshare<ell> *s1, MSSshare<ell> *s2);
 
 /* 预处理MSSshare_add_res对象，结果为多个分享对象的带系数累加
  * @param party_id: 参与方id，0/1/2
@@ -109,8 +110,8 @@ inline void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell
  */
 template <int ell>
 inline void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare_add_res<ell> *res,
-                                       std::vector<MSSshare<ell> *> &s_vec,
-                                       std::vector<int> &coeff_vec);
+                                              std::vector<MSSshare<ell> *> &s_vec,
+                                              std::vector<int> &coeff_vec);
 
 /* 预处理MSSshare_mul_res对象
  * @param party_id: 参与方id，0/1/2
@@ -124,9 +125,9 @@ inline void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare_add_r
  * @param s2: 第二个作为乘法输入的分享对象的指针
  */
 template <int ell>
-inline void MSSshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                 MSSshare_mul_res<ell> *res, const MSSshare<ell> *s1,
-                                 const MSSshare<ell> *s2);
+inline void MSSshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs,
+                                        NetIOMP &netio, MSSshare_mul_res<ell> *res,
+                                        const MSSshare<ell> *s1, const MSSshare<ell> *s2);
 
 /* 从secret_holder_id处获取秘密值x的MSSshare分享，存储在s中
  * @param secret_holder_id: 秘密值持有方id，0/1/2
@@ -137,19 +138,21 @@ inline void MSSshare_mul_res_preprocess(const int party_id, std::vector<PRGSync>
  */
 template <int ell>
 inline void MSSshare_share_from(const int secret_holder_id, const int party_id, NetIOMP &netio,
-                         MSSshare<ell> *s, ShareValue x);
+                                MSSshare<ell> *s, ShareValue x);
 
 /*与MSSshare_share_from类似，但将分享结果存储在netio的缓存中，等待后续发送，此时secret_holder_id必须为0
  */
 template <int ell>
-inline void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare<ell> *s, ShareValue x);
+inline void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare<ell> *s,
+                                      ShareValue x);
 
 /*明文加法
  * @param party_id: 参与方id，0/1/2
  * @param s: 存储分享结果的MSSshare对象指针
  * @param x: 待加的明文值
  */
-template <int ell> inline void MSSshare_add_plain(const int party_id, MSSshare<ell> *s, ShareValue x);
+template <int ell>
+inline void MSSshare_add_plain(const int party_id, MSSshare<ell> *s, ShareValue x);
 
 /*密文加法
  * @param party_id: 参与方id，0/1/2
@@ -158,8 +161,8 @@ template <int ell> inline void MSSshare_add_plain(const int party_id, MSSshare<e
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
 template <int ell>
-inline void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
-                               MSSshare<ell> *s2);
+inline void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res,
+                                      MSSshare<ell> *s1, MSSshare<ell> *s2);
 
 /*密文加法，带系数累加
  * @param party_id: 参与方id，0/1/2
@@ -169,8 +172,8 @@ inline void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> 
  */
 template <int ell>
 inline void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare_add_res<ell> *res,
-                                     std::vector<MSSshare<ell> *> &s_vec,
-                                     std::vector<int> &coeff_vec);
+                                            std::vector<MSSshare<ell> *> &s_vec,
+                                            std::vector<int> &coeff_vec);
 
 /*密文乘法
  * @param party_id: 参与方id，0/1/2
@@ -180,8 +183,9 @@ inline void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare_add_res
  * @param s2: 第二个作为乘法输入的分享对象的指针
  */
 template <int ell>
-inline void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_res<ell> *res,
-                               const MSSshare<ell> *s1, const MSSshare<ell> *s2);
+inline void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio,
+                                      MSSshare_mul_res<ell> *res, const MSSshare<ell> *s1,
+                                      const MSSshare<ell> *s2);
 
 template <int ell> inline void MSSshare_from_p(MSSshare<ell> *to, MSSshare_p *from);
 
