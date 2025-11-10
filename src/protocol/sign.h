@@ -45,7 +45,7 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
  * @param intermediate: 预处理的PI_sign_preprocess对象引用
  * @param input_x: 作为协议输入的MSSshare对象指针，需要已经分享完成
  * @param output_b: 协议输出的对象的指针
- * 
+ *
  * @templateparam ell: 输入分享的位数，输入分享必须在2^ell上
  * @templateparam k: 输出分享的模数
  */
@@ -53,5 +53,10 @@ template <int ell, ShareValue k>
 void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
              PI_sign_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
              MSSshare_p *output_b);
+
+template <int ell, ShareValue k>
+void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                 std::vector<PI_sign_intermediate<ell, k> *> &intermediate_vec,
+                 std::vector<MSSshare<ell> *> input_x_vec, std::vector<MSSshare_p *> output_b_vec);
 
 #include "protocol/sign.tpp"

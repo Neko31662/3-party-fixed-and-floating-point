@@ -40,7 +40,6 @@ int main(int argc, char **argv) {
 
     // 非向量测试
     {
-        // test
         for (int i = 0; i < test_nums; i++) {
             ShareValue test_value = i;
             if (i % 3 == 1) {
@@ -77,6 +76,57 @@ int main(int argc, char **argv) {
             }
         }
         cout << "PI_sign test passed!" << endl;
+    }
+
+    // 向量测试
+    {
+        int vec_size = 10;
+        for (int i = 0; i < max(1, test_nums / vec_size); i++) {
+            ShareValue test_value = i;
+            if (i % 3 == 1) {
+                test_value = ((ShareValue(1) << ell) - i) & MSSshare<ell>::MASK;
+            }
+            if (i % 3 == 2) {
+                private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
+                test_value &= MSSshare<ell>::MASK;
+            }
+
+            vector<PI_sign_intermediate<ell, k>> intermediate(vec_size);
+            vector<MSSshare<ell>> x_share(vec_size);
+            vector<MSSshare_p> b_share(vec_size, MSSshare_p{k});
+
+            // preprocess
+            for (int j = 0; j < vec_size; j++) {
+                MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share[j]);
+                PI_sign_preprocess(party_id, PRGs, *netio, intermediate[j], &x_share[j],
+                                   &b_share[j]);
+            }
+            if (party_id == 0 || party_id == 1) {
+                netio->send_stored_data(2);
+            }
+            // share
+            for (int j = 0; j < vec_size; j++) {
+                MSSshare_share_from(0, party_id, *netio, &x_share[j], test_value);
+            }
+
+            // compute
+            auto intermediate_vec = make_ptr_vec(intermediate);
+            auto x_share_vec = make_ptr_vec(x_share);
+            auto b_share_vec = make_ptr_vec(b_share);
+            PI_sign_vec(party_id, PRGs, *netio, intermediate_vec, x_share_vec, b_share_vec);
+
+            // reveal
+            for (int j = 0; j < vec_size; j++) {
+                ShareValue rec = MSSshare_p_recon(party_id, *netio, &b_share[j]);
+                ShareValue expected = test_value & (ShareValue(1) << (ell - 1)) ? 1 : 0;
+                if (rec != expected && party_id == 0) {
+                    cout << "Test " << i << "." << j << " failed! Expected: " << expected
+                         << ", got: " << rec << endl;
+                    exit(1);
+                }
+            }
+        }
+        cout << "PI_sign_vec test passed!" << endl;
     }
 
     delete netio;

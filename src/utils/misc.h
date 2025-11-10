@@ -100,6 +100,12 @@ struct encoded_msg {
         }
     }
 
+    void add_msg(const encoded_msg &msg) {
+        for (auto bit : msg.data) {
+            data.push_back(bit);
+        }
+    }
+
     void read_msg(char *msg, size_t bitlen) {
         for (size_t i = 0; i < bitlen; i++) {
             size_t byte_pos = i / 8;
@@ -166,4 +172,9 @@ template <typename T, typename... Ts>
 std::vector<T *> make_ptr_vec(T &first, T &second, Ts &...rest) {
     using PtrT = std::add_pointer_t<T>;
     return std::vector<PtrT>{&first, &second, &rest...};
+}
+template <typename Base, typename... Ts> std::vector<Base *> make_ptr_vec(Ts &...objs) {
+    static_assert(((std::is_base_of_v<Base, Ts> || std::is_same_v<Base, Ts>) && ...),
+                  "All types in Ts... must be Base or derive from Base");
+    return std::vector<Base *>{static_cast<Base *>(&objs)...};
 }
