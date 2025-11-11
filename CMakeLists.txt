@@ -31,6 +31,16 @@ function(setup_target target_name)
     target_include_directories(${target_name} PRIVATE ${PROJECT_INCLUDE_DIRS})
 endfunction()
 
+# Helper: add a test target with common sources and common libraries
+function(add_test_target target_name)
+    add_executable(${target_name}
+        ${COMMON_SOURCES}
+        "src/test/${target_name}.cpp"
+    )
+    setup_target(${target_name})
+    target_link_libraries(${target_name} pthread gmp)
+endfunction()
+
 # 主程序可执行文件
 # add_executable(floating-point
 #     ${COMMON_SOURCES}
@@ -38,136 +48,57 @@ endfunction()
 # )
 # setup_target(floating-point)
 
-# 测试程序可执行文件
-# 数据加载器测试
 
 # net_io_channel测试
-add_executable(net_io_channel_test
-    ${COMMON_SOURCES}
-    src/test/net_io_channel_test.cpp
-)
-setup_target(net_io_channel_test)
-target_link_libraries(net_io_channel_test pthread gmp)
+add_test_target(net_io_channel_test)
 
 # prg_sync测试
-add_executable(prg_test
-    ${COMMON_SOURCES}
-    src/test/prg_test.cpp
-)
-setup_target(prg_test)
-target_link_libraries(prg_test pthread gmp)
+add_test_target(prg_test)
 
 # MSS基础功能测试
-add_executable(MSS_basic_test
-    ${COMMON_SOURCES}
-    src/test/MSS_basic_test.cpp
-)
-setup_target(MSS_basic_test)
-target_link_libraries(MSS_basic_test pthread gmp)
+add_test_target(MSS_basic_test)
 
 # MSS加法功能测试
-add_executable(MSS_add_test
-    ${COMMON_SOURCES}
-    src/test/MSS_add_test.cpp
-)
-setup_target(MSS_add_test)
-target_link_libraries(MSS_add_test pthread gmp)
+add_test_target(MSS_add_test)
 
 # 定点数功能测试
-add_executable(fixed_point_test
-    ${COMMON_SOURCES}
-    src/test/fixed_point_test.cpp
-)
-setup_target(fixed_point_test)
-target_link_libraries(fixed_point_test pthread gmp)
+add_test_target(fixed_point_test)
 
 # 定点数明文乘法测试
-add_executable(fixed_point_plain_mul_test
-    ${COMMON_SOURCES}
-    src/test/fixed_point_plain_mul_test.cpp
-)
-setup_target(fixed_point_plain_mul_test)
-target_link_libraries(fixed_point_plain_mul_test pthread gmp)
+add_test_target(fixed_point_plain_mul_test)
 
 # detect协议测试
-add_executable(detect_test
-    ${COMMON_SOURCES}
-    src/test/detect_test.cpp
-)
-setup_target(detect_test)
-target_link_libraries(detect_test pthread gmp)
+add_test_target(detect_test)
 
 # prefix协议测试
-add_executable(prefix_test
-    ${COMMON_SOURCES}
-    src/test/prefix_test.cpp
-)
-setup_target(prefix_test)
-target_link_libraries(prefix_test pthread gmp)
+add_test_target(prefix_test)
 
 # 两方加法分享测试
-add_executable(addictive_share_test
-    ${COMMON_SOURCES}
-    src/test/addictive_share_test.cpp
-)
-setup_target(addictive_share_test)
-target_link_libraries(addictive_share_test pthread gmp)
+add_test_target(addictive_share_test)
 
 # 移位协议测试
-add_executable(shift_test
-    ${COMMON_SOURCES}
-    src/test/shift_test.cpp
-)
-setup_target(shift_test)
-target_link_libraries(shift_test pthread gmp)
+add_test_target(shift_test)
 
 # 最高位提取协议测试
-add_executable(sign_test
-    ${COMMON_SOURCES}
-    src/test/sign_test.cpp
-)
-setup_target(sign_test)
-target_link_libraries(sign_test pthread gmp)
+add_test_target(sign_test)
 
 # wrap协议测试
-add_executable(wrap_test
-    ${COMMON_SOURCES}
-    src/test/wrap_test.cpp
-)
-setup_target(wrap_test)
-target_link_libraries(wrap_test pthread gmp)
+add_test_target(wrap_test)
 
 # convert协议测试
-add_executable(convert_test
-    ${COMMON_SOURCES}
-    src/test/convert_test.cpp
-)
-setup_target(convert_test)
-target_link_libraries(convert_test pthread gmp)
+add_test_target(convert_test)
 
 # align协议测试
-add_executable(align_test
-    ${COMMON_SOURCES}
-    src/test/align_test.cpp
-)
-setup_target(align_test)
-target_link_libraries(align_test pthread gmp)
+add_test_target(align_test)
 
 # great协议测试
-add_executable(great_test
-    ${COMMON_SOURCES}
-    src/test/great_test.cpp
-)
-setup_target(great_test)
-target_link_libraries(great_test pthread gmp)
+add_test_target(great_test)
 
 # eq协议测试
-add_executable(eq_test
-    ${COMMON_SOURCES}
-    src/test/eq_test.cpp
-)
-setup_target(eq_test)
-target_link_libraries(eq_test pthread gmp)
+add_test_target(eq_test)
+
+# select协议测试
+add_test_target(select_test)
 
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest

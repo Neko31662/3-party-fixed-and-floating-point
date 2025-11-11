@@ -173,6 +173,7 @@ std::vector<T *> make_ptr_vec(T &first, T &second, Ts &...rest) {
     using PtrT = std::add_pointer_t<T>;
     return std::vector<PtrT>{&first, &second, &rest...};
 }
+
 template <typename Base, typename... Ts> std::vector<Base *> make_ptr_vec(Ts &...objs) {
     static_assert(((std::is_base_of_v<Base, Ts> || std::is_same_v<Base, Ts>) && ...),
                   "All types in Ts... must be Base or derive from Base");
