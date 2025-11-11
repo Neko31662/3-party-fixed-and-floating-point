@@ -161,6 +161,14 @@ add_executable(great_test
 setup_target(great_test)
 target_link_libraries(great_test pthread gmp)
 
+# eq协议测试
+add_executable(eq_test
+    ${COMMON_SOURCES}
+    src/test/eq_test.cpp
+)
+setup_target(eq_test)
+target_link_libraries(eq_test pthread gmp)
+
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest
 #     ${COMMON_SOURCES}
