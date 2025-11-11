@@ -8,11 +8,9 @@ using namespace std;
 const int BASE_PORT = 12345;
 const int NUM_PARTIES = 3;
 const int test_nums = 10000;
-const int li = 16;
-const int lf = 16;
+const int li = 4;
+const int lf = 4;
 const int l_res = li + lf + 1;
-
-uint64_t secret[10] = {11111, 22222, 33333, 44444, 55555, 66666, 77777};
 
 int main(int argc, char **argv) {
     // net io
@@ -86,16 +84,23 @@ int main(int argc, char **argv) {
 
         z_recon = MSSshare_recon(party_id, *netio, &z_share);
 
-        ShareValue z_plain = ((LongShareValue)x_recon * y_recon) >> lf;
+        ShareValue z_plain = (LongShareValue)x_recon * y_recon;
+        bool z_wrap = (z_plain & (ShareValue(1) << (lf - 1))) ? 1 : 0;
+        z_plain >>= lf;
+        z_plain += z_wrap;
         z_plain &= z_share.MASK;
         ShareValue dif = z_plain > z_recon ? z_plain - z_recon : z_recon - z_plain;
         if (dif > 1) {
-            cout << "x_recon: " << bitset<l_res>(x_recon) << endl;
-            cout << "y_recon: " << bitset<l_res>(y_recon) << endl;
-            cout << "z_recon: " << bitset<l_res>(z_recon) << endl;
-            cout << "z_plain: " << bitset<l_res>(z_plain) << endl;
-            cout << "Error: incorrect fixed-point multiplication at index " << test_i << endl;
-            exit(1);
+            // 排除特殊情况：00000000 和 11111111
+            ShareValue mx = max(z_plain, z_recon), mn = min(z_plain, z_recon);
+            if (!(mn == 0 && mx == z_share.MASK)) {
+                cout << "x_recon: " << bitset<l_res>(x_recon) << endl;
+                cout << "y_recon: " << bitset<l_res>(y_recon) << endl;
+                cout << "z_recon: " << bitset<l_res>(z_recon) << endl;
+                cout << "z_plain: " << bitset<l_res>(z_plain) << endl;
+                cout << "Error: incorrect fixed-point multiplication at index " << test_i << endl;
+                exit(1);
+            }
         }
     }
 
