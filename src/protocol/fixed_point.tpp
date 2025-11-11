@@ -94,7 +94,7 @@ template <int li, int lf, int l_res>
 void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                    PI_fixed_mult_intermediate<li, lf, l_res> &PI_fixed_mult_intermediate,
                    MSSshare<li + lf> *input_x, MSSshare<li + lf> *input_y,
-                   MSSshare<l_res> *output_z) {
+                   MSSshare<l_res> *output_z, bool has_offset) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_fixed_mult: input_x must be shared before calling PI_fixed_mult");
@@ -109,6 +109,7 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (!output_z->has_preprocess) {
         error("PI_fixed_mult: output_z must be preprocessed before calling PI_fixed_mult");
     }
+    output_z->has_shared = true;
 #endif
     if (party_id == 0) {
         return;
@@ -123,10 +124,12 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     ADDshare<lf + l_res - l_input> *lf_share2 = PI_fixed_mult_intermediate.lf_share2;
     ADDshare<lf + l_res - l_input> *lf_share3 = PI_fixed_mult_intermediate.lf_share3;
 
-    // Step 1: 将x和y的m加上2^(l-2)，之后视为lf + l_res位的分享
+    // Step 1: 如果有offset，将x和y的m加上2^(l-2)，之后视为lf + l_res位的分享
     MSSshare<l_input> input_origin[2] = {x, y};
     for (int i = 0; i < 2; i++) {
-        input_origin[i].v1 += (ShareValue(1) << (l_input - 2));
+        if (has_offset) {
+            input_origin[i].v1 += (ShareValue(1) << (l_input - 2));
+        }
         input_origin[i].v1 &= input_origin[i].MASK;
         input_origin[i].v2 &= input_origin[i].MASK;
     }
@@ -174,27 +177,34 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         mz_share.v -= (temp << l_input);
     }
 
-    // Step 2.7: [m_z] -= (m_x + m_y + [r_x] + [r_y]) * 2^(l-2)
-    for (int i = 0; i < 2; i++) {
-        ShareValue temp = input_origin[i].v2;
-        if (party_id == 1) {
-            temp += input_origin[i].v1;
+    // Step 2.7 - 2.9: 如果有offset，进行相应的修正
+    if (has_offset) {
+        // Step 2.7: [m_z] -= (m_x + m_y + [r_x] + [r_y]) * 2^(l-2)
+        for (int i = 0; i < 2; i++) {
+            ShareValue temp = input_origin[i].v2;
+            if (party_id == 1) {
+                temp += input_origin[i].v1;
+            }
+            mz_share.v -= (temp << (l_input - 2));
         }
-        mz_share.v -= (temp << (l_input - 2));
-    }
 
-    // Step 2.8: [m_z] += ( [w_a(0)+r_a(0)] - m_a(0)[r_a(0)] + m_a(0) ) * 2^(2l-2)
-    for (int i = 0; i < 2; i++) {
-        ShareValue temp = lf_share2[i].v - (m0[i] * lf_share1[i].v);
-        if (party_id == 1) {
-            temp += m0[i];
+        // Step 2.8: [m_z] += ( [w_a(0)+r_a(0)] - m_a(0)[r_a(0)] + m_a(0) ) * 2^(2l-2)
+        for (int i = 0; i < 2; i++) {
+            ShareValue temp = lf_share2[i].v - (m0[i] * lf_share1[i].v);
+            if (party_id == 1) {
+                temp += m0[i];
+            }
+            if (2 * l_input - 2 < ShareValue_BitLength) {
+                mz_share.v += (temp << (2 * l_input - 2));
+            }
         }
-        mz_share.v += (temp << (2 * l_input - 2));
-    }
 
-    // Step 2.9: [m_z] += 2^(2l-4)
-    if (party_id == 1) {
-        mz_share.v += (ShareValue(1) << (2 * l_input - 4));
+        // Step 2.9: [m_z] += 2^(2l-4)
+        if (party_id == 1) {
+            if (2 * l_input - 4 < ShareValue_BitLength) {
+                mz_share.v += (ShareValue(1) << (2 * l_input - 4));
+            }
+        }
     }
 
     // Step 2.10: [m_z] =([m_z] >> lf) + 1 - [r_z]

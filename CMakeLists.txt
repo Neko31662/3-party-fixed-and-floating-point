@@ -103,6 +103,9 @@ add_test_target(select_test)
 # trunc协议测试
 add_test_target(trunc_test)
 
+# floating_point_mult协议测试
+add_test_target(floating_point_mult_test)
+
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest
 #     ${COMMON_SOURCES}

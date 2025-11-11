@@ -44,6 +44,6 @@ template <int li, int lf, int l_res>
 void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                    PI_fixed_mult_intermediate<li, lf, l_res> &PI_fixed_mult_intermediate,
                    MSSshare<li + lf> *input_x, MSSshare<li + lf> *input_y,
-                   MSSshare<l_res> *output_z);
+                   MSSshare<l_res> *output_z, bool has_offset = true);
 
 #include "protocol/fixed_point.tpp"
