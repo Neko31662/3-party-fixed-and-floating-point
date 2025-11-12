@@ -5,23 +5,23 @@
 #include "protocol/masked_RSS_p.h"
 #include "utils/misc.h"
 
-template <ShareValue k> struct PI_convert_intermediate {
-    ADDshare_p_mul_res c{k};
+struct PI_convert_intermediate {
+    ADDshare_p_mul_res c;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
+
+    PI_convert_intermediate(ShareValue k) : c(k) {}
 };
 
-template <int ell, ShareValue k>
 void PI_convert_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                           PI_convert_intermediate<k> &intermediate, ADDshare<ell> *input_x,
+                           PI_convert_intermediate &intermediate, ADDshare<> *input_x,
                            MSSshare_p *output_z);
 
 /*将2^ell上的ADDshare分享转换为模k的MSSshare_p分享，要求input_x对应的明文最高位是0
  */
-template <int ell, ShareValue k>
+
 void PI_convert(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                PI_convert_intermediate<k> &intermediate, ADDshare<ell> *input_x,
-                MSSshare_p *output_z);
+                PI_convert_intermediate &intermediate, ADDshare<> *input_x, MSSshare_p *output_z);
 
 #include "protocol/convert.tpp"

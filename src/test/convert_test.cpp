@@ -39,13 +39,13 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int i = 0; i < test_nums; i++) {
-        PI_convert_intermediate<p2> intermediate;
-        ADDshare<ell> x_share;
+        PI_convert_intermediate intermediate(p2);
+        ADDshare<> x_share(ell);
         MSSshare_p z_share{p2};
 
         ShareValue x_plain = 0;
         private_PRG.gen_random_data(&x_plain, sizeof(ShareValue));
-        x_plain &= ADDshare<ell>::MASK;
+        x_plain &= x_share.MASK;
         x_plain >>= 1; // 保证最高位是0
 
         // preprocess

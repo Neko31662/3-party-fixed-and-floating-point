@@ -39,13 +39,13 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int test_i = 0; test_i < test_nums; test_i++) {
-        PI_align_intermediate<ell, ell2> intermediate;
-        MSSshare<ell> x_share;
-        MSSshare_add_res<ell> z_share;
-        MSSshare_mul_res<ell2> zeta_share;
+        PI_align_intermediate intermediate(ell, ell2);
+        MSSshare x_share(ell);
+        MSSshare z_share(ell);
+        MSSshare_mul_res zeta_share(ell2);
         // preprocess
         MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
-        PI_align_preprocess<ell, ell2>(party_id, PRGs, *netio, intermediate, &x_share, &z_share,
+        PI_align_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &z_share,
                                        &zeta_share);
 
         if (party_id == 0 || party_id == 1) {

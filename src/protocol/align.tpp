@@ -1,8 +1,6 @@
-template <int ell, int ell2>
 inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                PI_align_intermediate<ell, ell2> &intermediate,
-                                MSSshare<ell> *input_x, MSSshare_add_res<ell> *output_z,
-                                MSSshare_mul_res<ell2> *output_zeta) {
+                                PI_align_intermediate &intermediate, MSSshare *input_x,
+                                MSSshare *output_z, MSSshare_mul_res *output_zeta) {
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error(
@@ -20,41 +18,39 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     intermediate.has_preprocess = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare_add_res<ell> &z = *output_z;
-    MSSshare_mul_res<ell2> &zeta = *output_zeta;
+    int ell = intermediate.ell;
+    int ell2 = intermediate.ell2;
+    MSSshare &x = *input_x;
+    MSSshare &z = *output_z;
+    MSSshare_mul_res &zeta = *output_zeta;
     std::vector<ADDshare_p> &rx_list = intermediate.rx_list;
     std::vector<ADDshare_p> &L1_list = intermediate.L1_list;
     std::vector<ADDshare_p> &L2_list = intermediate.L2_list;
     std::vector<ADDshare_p> &D_list = intermediate.D_list;
     ADDshare_p &zeta1_addp = intermediate.zeta1_addp;
-    ADDshare<LOG_1(ell)> &zeta1_add = intermediate.zeta1_add;
-    MSSshare_mul_res<ell> &xprime_mss = intermediate.xprime_mss;
-    MSSshare<ell> &c_mss = intermediate.c_mss;
-    MSSshare_add_res<ell> &xprime2_mss = intermediate.xprime2_mss;
-    MSSshare<ell2> &c_mss2 = intermediate.c_mss2;
-    MSSshare<ell2> &zeta1_mss = intermediate.zeta1_mss;
-    MSSshare_p_add_res &b_mssp = intermediate.b_mssp;
+    ADDshare<> &zeta1_add = intermediate.zeta1_add;
+    MSSshare_mul_res &xprime_mss = intermediate.xprime_mss;
+    MSSshare &c_mss = intermediate.c_mss;
+    MSSshare &xprime2_mss = intermediate.xprime2_mss;
+    MSSshare &c_mss2 = intermediate.c_mss2;
+    MSSshare &zeta1_mss = intermediate.zeta1_mss;
+    MSSshare_p &b_mssp = intermediate.b_mssp;
     MSSshare_p &c_mssp = intermediate.c_mssp;
     MSSshare_p &zeta1_mssp = intermediate.zeta1_mssp;
 
-    MSSshare_add_res<ell> &tmp1 = intermediate.tmp1; //(xprime - xprime2)
-    MSSshare_mul_res<ell> &tmp2 = intermediate.tmp2; //(c * (xprime - xprime2) )
+    MSSshare &tmp1 = intermediate.tmp1;         //(xprime - xprime2)
+    MSSshare_mul_res &tmp2 = intermediate.tmp2; //(c * (xprime - xprime2) )
 
-    PI_wrap1_intermediate<ell, PI_align_intermediate<ell, ell2>::p> &wrap1_intermediate =
-        intermediate.wrap1_intermediate;
-    PI_shift_intermediate<ell> &shift_intermediate = intermediate.shift_intermediate;
-    PI_sign_intermediate<ell, (ShareValue(1) << (ell))> &sign_intermediate =
-        intermediate.sign_intermediate;
-    PI_convert_intermediate<(ShareValue(1) << (ell2))> &convert_intermediate =
-        intermediate.convert_intermediate;
+    PI_wrap1_intermediate &wrap1_intermediate = intermediate.wrap1_intermediate;
+    PI_shift_intermediate &shift_intermediate = intermediate.shift_intermediate;
+    PI_sign_intermediate &sign_intermediate = intermediate.sign_intermediate;
+    PI_convert_intermediate &convert_intermediate = intermediate.convert_intermediate;
 
-    MSSshare_add_res<ell> &temp_z_mss = intermediate.temp_z_mss;
-    MSSshare_mul_res<ell> &temp_z2_mss = intermediate.temp_z2_mss;
-    MSSshare_add_res<ell2> &temp_zeta_mss = intermediate.temp_zeta_mss;
+    MSSshare &temp_z_mss = intermediate.temp_z_mss;
+    MSSshare_mul_res &temp_z2_mss = intermediate.temp_z2_mss;
+    MSSshare &temp_zeta_mss = intermediate.temp_zeta_mss;
     MSSshare_p &signx_mssp = intermediate.signx_mssp;
-    PI_sign_intermediate<ell, (ShareValue(1) << (ell))> &sign_intermediate2 =
-        intermediate.sign_intermediate2;
+    PI_sign_intermediate &sign_intermediate2 = intermediate.sign_intermediate2;
 
     // Step 1: 计算rx_list并分享
     ShareValue rx = (x.v1 + x.v2) & x.MASK;
@@ -76,7 +72,7 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate, &xprime_mss, &c_mssp);
 
     // Step 6: tmp1, tmp2, temp_z
-    std::vector<MSSshare<ell> *> s_vec1{&xprime_mss, &xprime2_mss};
+    std::vector<MSSshare *> s_vec1{&xprime_mss, &xprime2_mss};
     std::vector<int> coeff1{1, -1};
     MSSshare_add_res_preprocess_multi(party_id, &tmp1, s_vec1, coeff1);
 
@@ -98,15 +94,15 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     MSSshare_from_p(&zeta1_mss, &zeta1_mssp);
 
     // Step 9: temp_zeta
-    std::vector<MSSshare<ell2> *> s_vec2{&zeta1_mss, &c_mss2};
+    std::vector<MSSshare *> s_vec2{&zeta1_mss, &c_mss2};
     std::vector<int> coeff2{1, -1};
     MSSshare_add_res_preprocess_multi(party_id, &temp_zeta_mss, s_vec2, coeff2);
 
     // Step 10: signx
-    MSSshare_p_add_res n_signx_mssp{(ShareValue(1) << ell)};
-    MSSshare<ell> n_signx_mss;
-    MSSshare<ell2> n_signx_mss2;
-    MSSshare_add_res<ell> temp_z_minus_x;
+    MSSshare_p n_signx_mssp{(ShareValue(1) << ell)};
+    MSSshare n_signx_mss(ell);
+    MSSshare n_signx_mss2(ell2);
+    MSSshare temp_z_minus_x(ell);
 
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate2, &x, &signx_mssp);
 
@@ -123,7 +119,7 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     n_signx_mss2.has_shared = n_signx_mss.has_shared;
 #endif
 
-    auto s_vec4 = std::vector<MSSshare<ell> *>{&temp_z_mss, &x};
+    auto s_vec4 = std::vector<MSSshare *>{&temp_z_mss, &x};
     auto coeff4 = std::vector<int>{1, -1};
     MSSshare_add_res_preprocess_multi(party_id, &temp_z_minus_x, s_vec4, coeff4);
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &temp_z2_mss, &temp_z_minus_x, &n_signx_mss);
@@ -131,10 +127,9 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     MSSshare_add_res_preprocess(party_id, &z, &x, &temp_z2_mss);
 }
 
-template <int ell, int ell2>
 inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                     PI_align_intermediate<ell, ell2> &intermediate, MSSshare<ell> *input_x,
-                     MSSshare_add_res<ell> *output_z, MSSshare_mul_res<ell2> *output_zeta) {
+                     PI_align_intermediate &intermediate, MSSshare *input_x, MSSshare *output_z,
+                     MSSshare_mul_res *output_zeta) {
 #ifdef DEBUG_MODE
     if (!intermediate.has_preprocess) {
         error("PI_align: PI_align_preprocess must be called before PI_align");
@@ -150,43 +145,40 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     }
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare_add_res<ell> &z = *output_z;
-    MSSshare_mul_res<ell2> &zeta = *output_zeta;
+    int ell = intermediate.ell;
+    int ell2 = intermediate.ell2;
+    MSSshare &x = *input_x;
+    MSSshare &z = *output_z;
+    MSSshare_mul_res &zeta = *output_zeta;
     std::vector<ADDshare_p> &rx_list = intermediate.rx_list;
     std::vector<ADDshare_p> &L1_list = intermediate.L1_list;
     std::vector<ADDshare_p> &L2_list = intermediate.L2_list;
     std::vector<ADDshare_p> &D_list = intermediate.D_list;
     ADDshare_p &zeta1_addp = intermediate.zeta1_addp;
-    ADDshare<LOG_1(ell)> &zeta1_add = intermediate.zeta1_add;
-    MSSshare_mul_res<ell> &xprime_mss = intermediate.xprime_mss;
-    MSSshare<ell> &c_mss = intermediate.c_mss;
-    MSSshare_add_res<ell> &xprime2_mss = intermediate.xprime2_mss;
-    MSSshare<ell2> &c_mss2 = intermediate.c_mss2;
-    MSSshare<ell2> &zeta1_mss = intermediate.zeta1_mss;
-    MSSshare_p_add_res &b_mssp = intermediate.b_mssp;
+    ADDshare<> &zeta1_add = intermediate.zeta1_add;
+    MSSshare_mul_res &xprime_mss = intermediate.xprime_mss;
+    MSSshare &c_mss = intermediate.c_mss;
+    MSSshare &xprime2_mss = intermediate.xprime2_mss;
+    MSSshare &c_mss2 = intermediate.c_mss2;
+    MSSshare &zeta1_mss = intermediate.zeta1_mss;
+    MSSshare_p &b_mssp = intermediate.b_mssp;
     MSSshare_p &c_mssp = intermediate.c_mssp;
     MSSshare_p &zeta1_mssp = intermediate.zeta1_mssp;
 
-    MSSshare_add_res<ell> &tmp1 = intermediate.tmp1; //(xprime - xprime2)
-    MSSshare_mul_res<ell> &tmp2 = intermediate.tmp2; //(c * (xprime - xprime2) )
+    MSSshare &tmp1 = intermediate.tmp1;         //(xprime - xprime2)
+    MSSshare_mul_res &tmp2 = intermediate.tmp2; //(c * (xprime - xprime2) )
 
-    PI_wrap1_intermediate<ell, PI_align_intermediate<ell, ell2>::p> &wrap1_intermediate =
-        intermediate.wrap1_intermediate;
-    PI_shift_intermediate<ell> &shift_intermediate = intermediate.shift_intermediate;
-    PI_sign_intermediate<ell, (ShareValue(1) << (ell))> &sign_intermediate =
-        intermediate.sign_intermediate;
-    PI_convert_intermediate<(ShareValue(1) << (ell2))> &convert_intermediate =
-        intermediate.convert_intermediate;
+    PI_wrap1_intermediate &wrap1_intermediate = intermediate.wrap1_intermediate;
+    PI_shift_intermediate &shift_intermediate = intermediate.shift_intermediate;
+    PI_sign_intermediate &sign_intermediate = intermediate.sign_intermediate;
+    PI_convert_intermediate &convert_intermediate = intermediate.convert_intermediate;
 
-    MSSshare_add_res<ell> &temp_z_mss = intermediate.temp_z_mss;
-    MSSshare_mul_res<ell> &temp_z2_mss = intermediate.temp_z2_mss;
-    MSSshare_add_res<ell2> &temp_zeta_mss = intermediate.temp_zeta_mss;
+    MSSshare &temp_z_mss = intermediate.temp_z_mss;
+    MSSshare_mul_res &temp_z2_mss = intermediate.temp_z2_mss;
+    MSSshare &temp_zeta_mss = intermediate.temp_zeta_mss;
     MSSshare_p &signx_mssp = intermediate.signx_mssp;
-    PI_sign_intermediate<ell, (ShareValue(1) << (ell))> &sign_intermediate2 =
-        intermediate.sign_intermediate2;
-
-    ShareValue p = PI_align_intermediate<ell, ell2>::p;
+    PI_sign_intermediate &sign_intermediate2 = intermediate.sign_intermediate2;
+    ShareValue p = intermediate.p;
 
     // Step 1: P1和P2提取mx_list
     std::vector<bool> mx_list(ell, 0);
@@ -247,7 +239,7 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     MSSshare_from_p(&c_mss, &c_mssp);
 
     // Step 10: tmp1, tmp2, z
-    std::vector<MSSshare<ell> *> s_vec1{&xprime_mss, &xprime2_mss};
+    std::vector<MSSshare *> s_vec1{&xprime_mss, &xprime2_mss};
     std::vector<int> coeff1{1, -1};
     MSSshare_add_res_calc_add_multi(party_id, &tmp1, s_vec1, coeff1);
 
@@ -268,15 +260,15 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     MSSshare_from_p(&zeta1_mss, &zeta1_mssp);
 
     // Step 13: zeta
-    std::vector<MSSshare<ell2> *> s_vec2{&zeta1_mss, &c_mss2};
+    std::vector<MSSshare *> s_vec2{&zeta1_mss, &c_mss2};
     std::vector<int> coeff2{1, -1};
     MSSshare_add_res_calc_add_multi(party_id, &temp_zeta_mss, s_vec2, coeff2);
 
     // Step 14: signx
-    MSSshare_p_add_res n_signx_mssp{(ShareValue(1) << ell)};
-    MSSshare<ell> n_signx_mss;
-    MSSshare<ell2> n_signx_mss2;
-    MSSshare_add_res<ell> temp_z_minus_x;
+    MSSshare_p n_signx_mssp{(ShareValue(1) << ell)};
+    MSSshare n_signx_mss(ell);
+    MSSshare n_signx_mss2(ell2);
+    MSSshare temp_z_minus_x(ell);
 
     PI_sign(party_id, PRGs, netio, sign_intermediate2, &x, &signx_mssp);
 
@@ -295,7 +287,7 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     n_signx_mss2.has_shared = n_signx_mss.has_shared;
 #endif
 
-    auto s_vec4 = std::vector<MSSshare<ell> *>{&temp_z_mss, &x};
+    auto s_vec4 = std::vector<MSSshare *>{&temp_z_mss, &x};
     auto coeff4 = std::vector<int>{1, -1};
     MSSshare_add_res_preprocess_multi(party_id, &temp_z_minus_x, s_vec4, coeff4);
     MSSshare_add_res_calc_add_multi(party_id, &temp_z_minus_x, s_vec4, coeff4);

@@ -1,7 +1,6 @@
-template <int ell, ShareValue k>
 void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_wrap1_spec_intermediate<ell, k> &intermediate,
-                              MSSshare<ell> *input_x, MSSshare_p *output_z) {
+                              PI_wrap1_spec_intermediate &intermediate, MSSshare *input_x,
+                              MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap1_spec_preprocess has already been called on this object");
@@ -13,14 +12,16 @@ void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     if (output_z->has_preprocess) {
         error("PI_wrap1_spec_preprocess: output_z has already been preprocessed");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap1_spec_preprocess: output_z modulus mismatch");
     }
     intermediate.has_preprocess = true;
     intermediate.rx0.has_shared = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &rx0 = intermediate.rx0;
 
@@ -32,10 +33,9 @@ void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     ADDshare_p_share_from_store(party_id, PRGs, netio, &rx0, plain_rx0 ? 1 : 0);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_wrap2_spec_intermediate<ell, k> &intermediate,
-                              MSSshare<ell> *input_x, MSSshare_p *output_z) {
+                              PI_wrap2_spec_intermediate &intermediate, MSSshare *input_x,
+                              MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap2_spec_preprocess has already been called on this object");
@@ -47,19 +47,21 @@ void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     if (output_z->has_preprocess) {
         error("PI_wrap2_spec_preprocess: output_z has already been preprocessed");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap2_spec_preprocess: output_z modulus mismatch");
     }
     intermediate.has_preprocess = true;
     intermediate.b.has_shared = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &b = intermediate.b;
 
-    PI_wrap1_spec_preprocess<ell, k>(party_id, PRGs, netio, intermediate.wrap1_intermediate,
-                                     input_x, output_z);
+    PI_wrap1_spec_preprocess(party_id, PRGs, netio, intermediate.wrap1_intermediate, input_x,
+                             output_z);
 
     bool plain_b;
     ShareValue r = x.v1 + x.v2;
@@ -71,9 +73,8 @@ void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     ADDshare_p_share_from_store(party_id, PRGs, netio, &b, plain_b ? 1 : 0);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_wrap1_spec_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
+                   PI_wrap1_spec_intermediate &intermediate, MSSshare *input_x,
                    MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
@@ -85,7 +86,7 @@ void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (!output_z->has_preprocess) {
         error("PI_wrap1_spec: output_z must be preprocessed before calling PI_wrap1_spec");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap1_spec: output_z modulus mismatch");
     }
     output_z->has_shared = true;
@@ -95,7 +96,9 @@ void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         return;
     }
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &rx0 = intermediate.rx0;
 
@@ -119,9 +122,8 @@ void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     z.v1 = ADDshare_p_recon(party_id, netio, &mz);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_wrap2_spec_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
+                   PI_wrap2_spec_intermediate &intermediate, MSSshare *input_x,
                    MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
@@ -133,7 +135,7 @@ void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (!output_z->has_preprocess) {
         error("PI_wrap2_spec: output_z must be preprocessed before calling PI_wrap2_spec");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap2_spec: output_z modulus mismatch");
     }
     output_z->has_shared = true;
@@ -143,7 +145,9 @@ void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         return;
     }
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &rx0 = intermediate.wrap1_intermediate.rx0;
     ADDshare_p &b = intermediate.b;
@@ -169,10 +173,9 @@ void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     z.v1 = ADDshare_p_recon(party_id, netio, &mz);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_wrap1_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare_p_add_res *output_z) {
+                         PI_wrap1_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap1_preprocess has already been called on this object");
@@ -184,17 +187,19 @@ void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     if (output_z->has_preprocess) {
         error("PI_wrap1_preprocess: output_z has already been preprocessed");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap1_preprocess: output_z modulus mismatch");
     }
     intermediate.has_preprocess = true;
     intermediate.tmpx.has_preprocess = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare<ell + 1> &tmpx = intermediate.tmpx;
-    MSSshare_p_add_res &z = *output_z;
-    PI_sign_intermediate<ell + 1, k> &sign_intermediate = intermediate.sign_intermediate;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
+    MSSshare &tmpx = intermediate.tmpx;
+    MSSshare_p &z = *output_z;
+    PI_sign_intermediate &sign_intermediate = intermediate.sign_intermediate;
     MSSshare_p &b = intermediate.b;
     MSSshare_p &c = intermediate.c;
     MSSshare_p_mul_res &b_mul_c = intermediate.b_mul_c;
@@ -221,10 +226,9 @@ void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     MSSshare_p_add_res_preprocess_multi(party_id, &z, s_vec, coeff_vec);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_wrap2_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare_p_add_res *output_z) {
+                         PI_wrap2_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap2_preprocess has already been called on this object");
@@ -236,25 +240,25 @@ void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     if (output_z->has_preprocess) {
         error("PI_wrap2_preprocess: output_z has already been preprocessed");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap2_preprocess: output_z modulus mismatch");
     }
     intermediate.has_preprocess = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare_p_add_res &z = *output_z;
-    PI_wrap1_intermediate<ell, k> &wrap1_intermediate = intermediate.wrap1_intermediate;
-    MSSshare_p_add_res &d = intermediate.d;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
+    MSSshare_p &z = *output_z;
+    PI_wrap1_intermediate &wrap1_intermediate = intermediate.wrap1_intermediate;
+    MSSshare_p &d = intermediate.d;
 
     PI_wrap1_preprocess(party_id, PRGs, netio, wrap1_intermediate, &x, &d);
     MSSshare_p_add_res_preprocess(party_id, &z, &d, &wrap1_intermediate.c);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_wrap1_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-              MSSshare_p_add_res *output_z) {
+              PI_wrap1_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_wrap1: input_x must be shared before calling PI_wrap1");
@@ -265,16 +269,18 @@ void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (!output_z->has_preprocess) {
         error("PI_wrap1: output_z must be preprocessed before calling PI_wrap1");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap1: output_z modulus mismatch");
     }
     intermediate.tmpx.has_shared = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare<ell + 1> &tmpx = intermediate.tmpx;
-    MSSshare_p_add_res &z = *output_z;
-    PI_sign_intermediate<ell + 1, k> &sign_intermediate = intermediate.sign_intermediate;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
+    MSSshare &tmpx = intermediate.tmpx;
+    MSSshare_p &z = *output_z;
+    PI_sign_intermediate &sign_intermediate = intermediate.sign_intermediate;
     MSSshare_p &b = intermediate.b;
     MSSshare_p &c = intermediate.c;
     MSSshare_p_mul_res &b_mul_c = intermediate.b_mul_c;
@@ -289,10 +295,8 @@ void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     MSSshare_p_add_res_calc_add_multi(party_id, &z, s_vec, coeff_vec);
 }
 
-template <int ell, ShareValue k>
 void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_wrap2_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-              MSSshare_p_add_res *output_z) {
+              PI_wrap2_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_wrap2: input_x must be shared before calling PI_wrap2");
@@ -303,15 +307,17 @@ void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (!output_z->has_preprocess) {
         error("PI_wrap2: output_z must be preprocessed before calling PI_wrap2");
     }
-    if (output_z->p != k) {
+    if (output_z->p != intermediate.k) {
         error("PI_wrap2: output_z modulus mismatch");
     }
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare_p_add_res &z = *output_z;
-    PI_wrap1_intermediate<ell, k> &wrap1_intermediate = intermediate.wrap1_intermediate;
-    MSSshare_p_add_res &d = intermediate.d;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
+    MSSshare_p &z = *output_z;
+    PI_wrap1_intermediate &wrap1_intermediate = intermediate.wrap1_intermediate;
+    MSSshare_p &d = intermediate.d;
 
     PI_wrap1(party_id, PRGs, netio, wrap1_intermediate, &x, &d);
     MSSshare_p_add_res_calc_add(party_id, &z, &d, &wrap1_intermediate.c);

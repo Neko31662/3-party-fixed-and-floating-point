@@ -39,23 +39,6 @@ class MSSshare_p {
     MSSshare_p &operator=(const ShareValue &) = delete;
 };
 
-class MSSshare_p_add_res : public MSSshare_p {
-  public:
-#ifdef DEBUG_MODE
-    using MSSshare_p::has_preprocess;
-    using MSSshare_p::has_shared;
-#endif
-    using MSSshare_p::BITLEN;
-    using MSSshare_p::BYTELEN;
-    using MSSshare_p::p;
-    using MSSshare_p::v1;
-    using MSSshare_p::v2;
-
-    MSSshare_p_add_res(ShareValue p) : MSSshare_p(p) {}
-    virtual ~MSSshare_p_add_res() = default;
-    MSSshare_p_add_res &operator=(const ShareValue &) = delete;
-};
-
 class MSSshare_p_mul_res : public MSSshare_p {
   public:
 #ifdef DEBUG_MODE
@@ -108,7 +91,7 @@ inline void MSSshare_p_preprocess(const int secret_holder_id, const int party_id
  * @param s1: 第一个作为加法输入的分享对象的指针
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
-inline void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
+inline void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p *res, MSSshare_p *s1,
                                    MSSshare_p *s2);
 
 /* 预处理MSSshare_p_add_res对象，结果为多个分享对象的带系数累加
@@ -117,7 +100,7 @@ inline void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p_add_res
  * @param s_vec: 多个作为加法输入的分享对象的指针数组
  * @param coeff_vec: 对应的明文系数数组，可以是负数
  */
-inline void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p_add_res *res,
+inline void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p *res,
                                          std::vector<MSSshare_p *> &s_vec,
                                          std::vector<int> &coeff_vec);
 
@@ -163,7 +146,7 @@ inline void MSSshare_p_add_plain(const int party_id, MSSshare_p *s, ShareValue x
  * @param s1: 第一个作为加法输入的分享对象的指针
  * @param s2: 第二个作为加法输入的分享对象的指针
  */
-inline void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
+inline void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p *res, MSSshare_p *s1,
                                  MSSshare_p *s2);
 
 /*密文加法，带系数的多重累加
@@ -172,7 +155,7 @@ inline void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p_add_res *
  * @param s_vec: 多个作为加法输入的分享对象的指针数组
  * @param coeff_vec: 对应的明文系数数组，可以是负数
  */
-inline void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p_add_res *res,
+inline void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p *res,
                                        std::vector<MSSshare_p *> &s_vec,
                                        std::vector<int> &coeff_vec);
 

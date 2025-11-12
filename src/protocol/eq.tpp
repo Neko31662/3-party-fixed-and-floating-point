@@ -1,7 +1,7 @@
-template <int ell, ShareValue k>
+
 void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                      PRGSync private_PRG, PI_eq_intermediate<ell, k> &intermediate,
-                      MSSshare<ell> *input_x, MSSshare<ell> *input_y, MSSshare_p *output_b) {
+                      PRGSync private_PRG, PI_eq_intermediate &intermediate, MSSshare *input_x,
+                      MSSshare *input_y, MSSshare_p *output_b) {
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error("PI_eq_preprocess: input_x must be preprocessed before calling PI_eq_preprocess");
@@ -15,19 +15,20 @@ void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &n
     if (output_b->has_preprocess) {
         error("PI_eq_preprocess: output_b has already been preprocessed");
     }
-    if (output_b->p != k) {
+    if (output_b->p != intermediate.k) {
         error("PI_eq_preprocess: output_b modulus mismatch");
     }
     intermediate.has_preprocess = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare<ell> &y = *input_y;
+    int ell = input_x->BITLEN;
+    MSSshare &x = *input_x;
+    MSSshare &y = *input_y;
     MSSshare_p &b = *output_b;
     std::vector<ADDshare_p> &t_list = intermediate.t_list;
     std::vector<ADDshare_p> &rd_list = intermediate.rd_list;
     ADDshare_p &sigma = intermediate.sigma;
-    ShareValue p = PI_eq_intermediate<ell, k>::p;
+    ShareValue p = intermediate.p;
 
     // Step 1: 预处理b
     MSSshare_p_preprocess(0, party_id, PRGs, netio, &b);
@@ -57,9 +58,8 @@ void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &n
     }
 }
 
-template <int ell, ShareValue k>
 void PI_eq(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-           PI_eq_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x, MSSshare<ell> *input_y,
+           PI_eq_intermediate &intermediate, MSSshare *input_x, MSSshare *input_y,
            MSSshare_p *output_b) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
@@ -74,26 +74,27 @@ void PI_eq(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (!output_b->has_preprocess) {
         error("PI_eq: output_b must be preprocessed before calling PI_eq");
     }
-    if (output_b->p != k) {
+    if (output_b->p != intermediate.k) {
         error("PI_eq: output_b modulus mismatch");
     }
     output_b->has_shared = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
-    MSSshare<ell> &y = *input_y;
+    int ell = input_x->BITLEN;
+    MSSshare &x = *input_x;
+    MSSshare &y = *input_y;
     MSSshare_p &b = *output_b;
     std::vector<ADDshare_p> &t_list = intermediate.t_list;
     std::vector<ADDshare_p> &rd_list = intermediate.rd_list;
     ADDshare_p &sigma = intermediate.sigma;
-    ShareValue p = PI_eq_intermediate<ell, k>::p;
+    ShareValue p = intermediate.p;
 
     if (party_id == 0) {
         return;
     }
 
     // Step 1: 计算d = x - y
-    MSSshare<ell> d;
+    MSSshare d(ell);
     d.v1 = (x.v1 - y.v1) & d.MASK;
     d.v2 = (x.v2 - y.v2) & d.MASK;
 #ifdef DEBUG_MODE

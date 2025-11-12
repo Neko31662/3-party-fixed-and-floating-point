@@ -9,19 +9,28 @@
 
 // li: 乘数的整数位长度， lf: 乘数和结果的小数位长度， l_res: 结果的总长度
 
-template <int li, int lf, int l_res> struct PI_fixed_mult_intermediate {
-    static const int l_input = li + lf;
+struct PI_fixed_mult_intermediate {
+    int li, lf, l_res;
+    int l_input;
 
-    ADDshare<lf + l_res> Gamma;
-    ADDshare<lf + l_res - l_input> lf_share1[2]; // r_x(0)
-    ADDshare<lf + l_res - l_input> lf_share2[2]; // w_x(0)+r_x(0)
-    ADDshare<lf + l_res - l_input> lf_share3[2]; // (1-r_x(0))(r_y_1+r_y_2)
+    ADDshare<> Gamma;
+    ADDshare<> lf_share1[2]; // r_x(0)
+    ADDshare<> lf_share2[2]; // w_x(0)+r_x(0)
+    ADDshare<> lf_share3[2]; // (1-r_x(0))(r_y_1+r_y_2)
 
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
 
-    PI_fixed_mult_intermediate() {
+    PI_fixed_mult_intermediate(int li, int lf, int l_res)
+        : Gamma(lf + l_res),
+          lf_share1{ADDshare(lf + l_res - (li + lf)), ADDshare(lf + l_res - (li + lf))},
+          lf_share2{ADDshare(lf + l_res - (li + lf)), ADDshare(lf + l_res - (li + lf))},
+          lf_share3{ADDshare(lf + l_res - (li + lf)), ADDshare(lf + l_res - (li + lf))} {
+        this->li = li;
+        this->lf = lf;
+        this->l_res = l_res;
+        l_input = li + lf;
         if (li <= 0 || lf <= 0 || l_res <= 0) {
             error("PI_fixed_mult_intermediate: li,lf and l_res must be positive integers");
         }
@@ -34,16 +43,12 @@ template <int li, int lf, int l_res> struct PI_fixed_mult_intermediate {
     }
 };
 
-template <int li, int lf, int l_res>
 void PI_fixed_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_fixed_mult_intermediate<li, lf, l_res> &PI_fixed_mult_intermediate,
-                              MSSshare<li + lf> *input_x, MSSshare<li + lf> *input_y,
-                              MSSshare<l_res> *output_z);
+                              PI_fixed_mult_intermediate &PI_fixed_mult_intermediate,
+                              MSSshare *input_x, MSSshare *input_y, MSSshare *output_z);
 
-template <int li, int lf, int l_res>
 void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_fixed_mult_intermediate<li, lf, l_res> &PI_fixed_mult_intermediate,
-                   MSSshare<li + lf> *input_x, MSSshare<li + lf> *input_y,
-                   MSSshare<l_res> *output_z, bool has_offset = true);
+                   PI_fixed_mult_intermediate &PI_fixed_mult_intermediate, MSSshare *input_x,
+                   MSSshare *input_y, MSSshare *output_z, bool has_offset = true);
 
 #include "protocol/fixed_point.tpp"

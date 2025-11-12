@@ -42,9 +42,9 @@ int main(int argc, char **argv) {
         {
             const int ell = 60;
             // shares allocation
-            std::vector<MSSshare<ell>> s(len);
-            std::vector<MSSshare_add_res<ell>> s_add(len);
-            std::vector<MSSshare_mul_res<ell>> s_mul(len);
+            std::vector<MSSshare> s(len, MSSshare(ell));
+            std::vector<MSSshare> s_add(len, MSSshare(ell));
+            std::vector<MSSshare_mul_res> s_mul(len, MSSshare_mul_res(ell));
 
             // preprocess
             //    i: 0, 1, 2, 3, 4, 5, 6
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
             const int p = 169316931;
             // shares allocation
             std::vector<MSSshare_p> s(len, p);
-            std::vector<MSSshare_p_add_res> s_add(len, p);
+            std::vector<MSSshare_p> s_add(len, p);
             std::vector<MSSshare_p_mul_res> s_mul(len, p);
 
             // preprocess

@@ -1,9 +1,9 @@
-template <int ell>
 void PI_shift_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_shift_intermediate<ell> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare_mul_res<ell> *output_res) {
+                         PI_shift_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare_mul_res *output_res) {
 #ifdef DEBUG_MODE
-    if (ell > LongShareValue_BitLength / 4) {
+    int DEBUG_ell = input_x->BITLEN;
+    if (DEBUG_ell > LongShareValue_BitLength / 4) {
         error("PI_shift_preprocess only supports ell <= " +
               std::to_string(LongShareValue_BitLength / 4) + " now");
     }
@@ -22,10 +22,9 @@ void PI_shift_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
                                 &intermediate.two_pow_k);
 }
 
-template <int ell>
 void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_shift_intermediate<ell> &intermediate, MSSshare<ell> *input_x,
-              ADDshare<LOG_1(ell)> *input_k, MSSshare_mul_res<ell> *output_res) {
+              PI_shift_intermediate &intermediate, MSSshare *input_x, ADDshare<> *input_k,
+              MSSshare_mul_res *output_res) {
 #ifdef DEBUG_MODE
     if (!intermediate.has_preprocess) {
         error("PI_shift: intermediate must be preprocessed before calling PI_shift");
@@ -39,6 +38,9 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (!output_res->has_preprocess) {
         error("PI_shift: output_res must be preprocessed before calling PI_shift");
     }
+    if(LOG_1(input_x->BITLEN) != input_k->BITLEN){
+        error("PI_shift: input_k bitlength mismatch");
+    }
     output_res->has_shared = true;
 #endif
     if (party_id == 0) {
@@ -46,10 +48,12 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         return;
     }
 
+    int ell = input_x->BITLEN;
+
     if (party_id == 1 || party_id == 2) {
         // Step 1: 计算di_prime = 2 ^ ki (mod 2^EXPANDED_ELL(ell) )，并设为两个加法分享
         ShareValue di_prime = LongShareValue(1) << (input_k->v & input_k->MASK);
-        ADDshare<EXPANDED_ELL(ell), LongShareValue> di_prime_share[2];
+        ADDshare<LongShareValue> di_prime_share[2]{(EXPANDED_ELL(ell)), (EXPANDED_ELL(ell))};
         if (party_id == 1) {
             di_prime_share[0].v = di_prime;
             di_prime_share[1].v = 0;
@@ -69,7 +73,7 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                                   &di_prime_share[1]);
 
         // Step3: 计算gamma1
-        ADDshare<ell> k_first_bit[2];
+        ADDshare<> k_first_bit[2]{ell, ell};
         if (party_id == 1) {
             k_first_bit[0].v = (input_k->v & ((input_k->MASK + 1) >> 1)) ? 1 : 0;
             k_first_bit[1].v = 0;
@@ -86,7 +90,7 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         //                           &k_first_bit[1]);
 
         // Step4: 计算gamma2
-        ADDshare<ell> d_first_bit[2];
+        ADDshare<> d_first_bit[2]{ell, ell};
         if (party_id == 1) {
             d_first_bit[0].v =
                 (intermediate.d_prime.v & ((intermediate.d_prime.MASK + 1) >> (ell + 1))) ? 1 : 0;
@@ -109,14 +113,14 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         ADDshare_mul_res_cal_mult_vec(party_id, netio, vec0, vec1, vec2);
 
         // Step5: 计算 c = k_first_bit[0] + k_first_bit[1] - gamma1
-        ADDshare<ell> c;
+        ADDshare<> c(ell);
         c.v = (k_first_bit[0].v + k_first_bit[1].v - intermediate.gamma1.v) & c.MASK;
 #ifdef DEBUG_MODE
         c.has_shared = true;
 #endif
 
         // Step6: 计算 b = d_first_bit[0] + d_first_bit[1] - gamma2
-        ADDshare<ell> b;
+        ADDshare<> b(ell);
         b.v = (d_first_bit[0].v + d_first_bit[1].v - intermediate.gamma2.v) & b.MASK;
 #ifdef DEBUG_MODE
         b.has_shared = true;
@@ -124,7 +128,7 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
         // Step7: 计算a0 = d_prime mod 2^ell
         // a1 = (d_prime >> (1<<LOG_1(ell)) + b ) mod 2^ell
-        ADDshare<ell> a0, a1;
+        ADDshare<> a0(ell), a1(ell);
         a0.v = intermediate.d_prime.v & a0.MASK;
         a1.v = ((intermediate.d_prime.v >> (1 << LOG_1(ell))) + b.v) & a1.MASK;
 #ifdef DEBUG_MODE
@@ -133,13 +137,13 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 #endif
 
         // Step 8: gamma3 = c * (a1-a0); two_pow_k = gamma3 + a0
-        ADDshare<ell> a1_minus_a0;
+        ADDshare<> a1_minus_a0(ell);
         a1_minus_a0.v = (a1.v - a0.v) & a1_minus_a0.MASK;
 #ifdef DEBUG_MODE
         a1_minus_a0.has_shared = true;
 #endif
         ADDshare_mul_res_cal_mult(party_id, netio, &intermediate.gamma3, &c, &a1_minus_a0);
-        ADDshare<ell> two_pow_k_ADDshare;
+        ADDshare<> two_pow_k_ADDshare(ell);
         two_pow_k_ADDshare.v = (intermediate.gamma3.v + a0.v) & two_pow_k_ADDshare.MASK;
 #ifdef DEBUG_MODE
         two_pow_k_ADDshare.has_shared = true;
@@ -180,7 +184,8 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         //           << " ,k_first_bit[0]:" << k_first_bit[0].v << std::endl;
         // std::cout << "k_first_bit[1] recon: " << (uint64_t)recon4_2
         //           << " ,k_first_bit[1]:" << k_first_bit[1].v << std::endl;
-        // std::cout << "gamma1 recon: " << (uint64_t)reron4_3 << " ,gamma1:" << intermediate.gamma1.v
+        // std::cout << "gamma1 recon: " << (uint64_t)reron4_3 << " ,gamma1:" <<
+        // intermediate.gamma1.v
         //           << std::endl;
         // std::cout << "c recon: " << (uint64_t)recon4 << std::endl << std::endl;
         // auto recon5_1 = ADDshare_recon(party_id, netio, &d_first_bit[0]);

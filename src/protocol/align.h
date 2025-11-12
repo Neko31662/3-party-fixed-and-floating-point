@@ -12,55 +12,65 @@
 #include "utils/misc.h"
 #include "utils/permutation.h"
 
-template <int ell, int ell2> struct PI_align_intermediate {
+struct PI_align_intermediate {
+    int ell;
+    int ell2;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
-    constexpr static ShareValue p = nxt_prime(ell);
-    constexpr static ShareValue p2 = (ShareValue(1) << LOG_1(ell));
+    ShareValue p;
+    ShareValue p2;
     std::vector<ADDshare_p> rx_list;
     std::vector<ADDshare_p> L1_list;
     std::vector<ADDshare_p> L2_list;
     std::vector<ADDshare_p> D_list;
-    ADDshare_p zeta1_addp{p2};
-    ADDshare<LOG_1(ell)> zeta1_add;
-    MSSshare_p c_mssp{(ShareValue(1) << ell)}, zeta1_mssp{(ShareValue(1) << ell2)};
-    MSSshare<ell> c_mss;
-    MSSshare<ell2> c_mss2, zeta1_mss;
-    MSSshare_add_res<ell> xprime2_mss;
-    MSSshare_p_add_res b_mssp{p};
-    MSSshare_mul_res<ell> xprime_mss;
+    ADDshare_p zeta1_addp;
+    ADDshare<> zeta1_add;
+    MSSshare_p c_mssp, zeta1_mssp;
+    MSSshare c_mss;
+    MSSshare c_mss2, zeta1_mss;
+    MSSshare xprime2_mss;
+    MSSshare_p b_mssp;
+    MSSshare_mul_res xprime_mss;
 
-    MSSshare_add_res<ell> tmp1; //(xprime - xprime2)
-    MSSshare_mul_res<ell> tmp2; //(c * (xprime - xprime2) )
+    MSSshare tmp1;         //(xprime - xprime2)
+    MSSshare_mul_res tmp2; //(c * (xprime - xprime2) )
 
-    PI_wrap1_intermediate<ell, p> wrap1_intermediate;
-    PI_shift_intermediate<ell> shift_intermediate;
-    PI_sign_intermediate<ell, (ShareValue(1) << (ell))> sign_intermediate;
-    PI_convert_intermediate<(ShareValue(1) << (ell2))> convert_intermediate;
+    PI_wrap1_intermediate wrap1_intermediate;
+    PI_shift_intermediate shift_intermediate;
+    PI_sign_intermediate sign_intermediate;
+    PI_convert_intermediate convert_intermediate;
 
-    MSSshare_add_res<ell> temp_z_mss;              // 原本的输出z
-    MSSshare_mul_res<ell> temp_z2_mss;             // (temp_z_mss - x)(1-signx)
-    MSSshare_add_res<ell2> temp_zeta_mss;          // 原本的输出zeta
-    MSSshare_p signx_mssp{(ShareValue(1) << ell)}; // signx
-    PI_sign_intermediate<ell, (ShareValue(1) << (ell))> sign_intermediate2;
+    MSSshare temp_z_mss;          // 原本的输出z
+    MSSshare_mul_res temp_z2_mss; // (temp_z_mss - x)(1-signx)
+    MSSshare temp_zeta_mss;       // 原本的输出zeta
+    MSSshare_p signx_mssp;        // signx
+    PI_sign_intermediate sign_intermediate2;
 
-    PI_align_intermediate() : rx_list(ell, p), L1_list(ell, p), L2_list(ell, p), D_list(ell, p) {
+    PI_align_intermediate(int ell, int ell2)
+        : p(nxt_prime(ell)), p2(ShareValue(1) << LOG_1(ell)), rx_list(ell, p), L1_list(ell, p),
+          L2_list(ell, p), D_list(ell, p), zeta1_add(LOG_1(ell)), c_mss(ell), c_mss2(ell2),
+          zeta1_mss(ell2), xprime2_mss(ell), b_mssp(p), xprime_mss(ell), tmp1(ell), tmp2(ell),
+          wrap1_intermediate(ell, p), shift_intermediate(ell),
+          sign_intermediate(ell, (ShareValue(1) << (ell))),
+          convert_intermediate((ShareValue(1) << (ell2))), temp_z_mss(ell), temp_z2_mss(ell),
+          temp_zeta_mss(ell2), signx_mssp((ShareValue(1) << ell)),
+          sign_intermediate2(ell, (ShareValue(1) << (ell))), zeta1_addp(p2),
+          c_mssp(ShareValue(1) << ell), zeta1_mssp(ShareValue(1) << ell2) {
+        this->ell = ell;
+        this->ell2 = ell2;
         if (ell2 > ell) {
             error("PI_align_intermediate: ell2 must be less or equal to ell");
         }
     }
 };
 
-template <int ell, int ell2>
 inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                PI_align_intermediate<ell, ell2> &intermediate,
-                                MSSshare<ell> *input_x, MSSshare_add_res<ell> *output_z,
-                                MSSshare_mul_res<ell2> *output_zeta);
+                                PI_align_intermediate &intermediate, MSSshare *input_x,
+                                MSSshare *output_z, MSSshare_mul_res *output_zeta);
 
-template <int ell, int ell2>
 inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                     PI_align_intermediate<ell, ell2> &intermediate, MSSshare<ell> *input_x,
-                     MSSshare_add_res<ell> *output_z, MSSshare_mul_res<ell2> *output_zeta);
+                     PI_align_intermediate &intermediate, MSSshare *input_x, MSSshare *output_z,
+                     MSSshare_mul_res *output_zeta);
 
 #include "protocol/align.tpp"

@@ -32,10 +32,10 @@ int main(int argc, char **argv) {
     for (int k = 0; k < ell; ++k) {
         ShareValue plain_x = 24678;
 
-        PI_shift_intermediate<ell> intermediate;
-        ADDshare<LOG_1(ell)> k_share;
-        MSSshare<ell> x_share;
-        MSSshare_mul_res<ell> output_res;
+        PI_shift_intermediate intermediate(ell);
+        ADDshare<> k_share(LOG_1(ell));
+        MSSshare x_share(ell);
+        MSSshare_mul_res output_res(ell);
 
         // preprocess
         MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);

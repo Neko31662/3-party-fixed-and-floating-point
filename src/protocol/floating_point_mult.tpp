@@ -1,8 +1,8 @@
-template <int lf, int le>
 void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_float_mult_intermediate<lf, le> &intermediate,
-                              FLTshare<lf, le> *input_x, FLTshare<lf, le> *input_y,
-                              FLTshare<lf, le> *output_z) {
+                              PI_float_mult_intermediate &intermediate, FLTshare *input_x,
+                              FLTshare *input_y, FLTshare *output_z) {
+    int lf = intermediate.lf;
+    int le = intermediate.le;
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_float_mult_preprocess has already been called on this object");
@@ -18,22 +18,24 @@ void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     if (output_z->has_preprocess) {
         error("PI_float_mult_preprocess: output_z has already been preprocessed");
     }
+    if (input_x->lf != lf || input_x->le != le || input_y->lf != lf || input_y->le != le ||
+        output_z->lf != lf || output_z->le != le) {
+        error("PI_float_mult_preprocess: input_x, input_y or output_z lf/le mismatch");
+    }
     intermediate.has_preprocess = true;
     output_z->has_preprocess = true;
 #endif
 
-    FLTshare<lf, le> &x = *input_x;
-    FLTshare<lf, le> &y = *input_y;
-    FLTshare<lf, le> &z = *output_z;
-    MSSshare<lf + 3> &zhat1_lf_3 = intermediate.zhat1_lf_3;
+    FLTshare &x = *input_x;
+    FLTshare &y = *input_y;
+    FLTshare &z = *output_z;
+    MSSshare &zhat1_lf_3 = intermediate.zhat1_lf_3;
     MSSshare_p &c = intermediate.c;
-    MSSshare_mul_res<lf + 3> &zhat2_lf_3 = intermediate.zhat2_lf_3;
-    MSSshare_mul_res<1> &bx_mul_by = intermediate.bx_mul_by;
+    MSSshare_mul_res &zhat2_lf_3 = intermediate.zhat2_lf_3;
+    MSSshare_mul_res &bx_mul_by = intermediate.bx_mul_by;
 
-    PI_fixed_mult_intermediate<2, lf, lf + 3> &fixed_mult_intermediate =
-        intermediate.fixed_mult_intermediate;
-    PI_sign_intermediate<lf + 2, (ShareValue(1) << (lf + 3))> &sign_intermediate =
-        intermediate.sign_intermediate;
+    PI_fixed_mult_intermediate &fixed_mult_intermediate = intermediate.fixed_mult_intermediate;
+    PI_sign_intermediate &sign_intermediate = intermediate.sign_intermediate;
 
     // Step 1: 预处理bx_mul_by
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &bx_mul_by, &x.b, &y.b);
@@ -43,7 +45,7 @@ void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
                              &zhat1_lf_3);
 
     // Step 3: 计算zhat1_lf_2 = zhat1_lf_3的后lf+2位
-    MSSshare<lf + 2> zhat1_lf_2;
+    MSSshare zhat1_lf_2(lf + 2);
 #ifdef DEBUG_MODE
     zhat1_lf_2.has_preprocess = true;
 #endif
@@ -54,11 +56,11 @@ void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate, &zhat1_lf_2, &c);
 
     // Step 5: 生成MSSshare的c
-    MSSshare<lf + 3> c_mss;
+    MSSshare c_mss(lf + 3);
     MSSshare_from_p(&c_mss, &c);
 
     // Step 6: zhat2_lf_3 = zhat1_lf_3 * (2 - c)
-    MSSshare<lf + 3> two_minus_c;
+    MSSshare two_minus_c(lf + 3);
 #ifdef DEBUG_MODE
     two_minus_c.has_preprocess = true;
 #endif
@@ -75,7 +77,7 @@ void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     z.t.v2 = (zhat2_lf_3.v2 & zhat2_lf_3.MASK) >> 1;
 
     // Step 8: c (in le bits)
-    MSSshare<le> c_le;
+    MSSshare c_le(le);
 #ifdef DEBUG_MODE
     c_le.has_preprocess = true;
 #endif
@@ -85,22 +87,23 @@ void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     // Step 9: z.e = x.e + y.e + c_le - 2^(le-1)
     auto s1_vec = make_ptr_vec(x.e, y.e, c_le);
     auto coeff1_vec = std::vector<int>{1, 1, 1};
-    MSSshare_add_res<le> z_e_tmp;
+    MSSshare z_e_tmp(le);
     MSSshare_add_res_preprocess_multi(party_id, &z_e_tmp, s1_vec, coeff1_vec);
     z.e = z_e_tmp;
 
     // Step 10: z.b = x.b + y.b - 2 * x.b * y.b
     auto s2_vec = make_ptr_vec(x.b, y.b, bx_mul_by);
     auto coeff2_vec = std::vector<int>{1, 1, -2};
-    MSSshare_add_res<1> z_b_tmp;
+    MSSshare z_b_tmp(1);
     MSSshare_add_res_preprocess_multi(party_id, &z_b_tmp, s2_vec, coeff2_vec);
     z.b = z_b_tmp;
 }
 
-template <int lf, int le>
 void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_float_mult_intermediate<lf, le> &intermediate, FLTshare<lf, le> *input_x,
-                   FLTshare<lf, le> *input_y, FLTshare<lf, le> *output_z) {
+                   PI_float_mult_intermediate &intermediate, FLTshare *input_x, FLTshare *input_y,
+                   FLTshare *output_z) {
+    int lf = intermediate.lf;
+    int le = intermediate.le;
 #ifdef DEBUG_MODE
     if (!intermediate.has_preprocess) {
         error("PI_float_mult: intermediate must be preprocessed before calling PI_float_mult");
@@ -114,21 +117,23 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (!output_z->has_preprocess) {
         error("PI_float_mult: output_z must be preprocessed before calling PI_float_mult");
     }
+    if (input_x->lf != lf || input_x->le != le || input_y->lf != lf || input_y->le != le ||
+        output_z->lf != lf || output_z->le != le) {
+        error("PI_float_mult_preprocess: input_x, input_y or output_z lf/le mismatch");
+    }
     output_z->has_shared = true;
 #endif
 
-    FLTshare<lf, le> &x = *input_x;
-    FLTshare<lf, le> &y = *input_y;
-    FLTshare<lf, le> &z = *output_z;
-
-    PI_fixed_mult_intermediate<2, lf, lf + 3> &fixed_mult_intermediate =
-        intermediate.fixed_mult_intermediate;
-    PI_sign_intermediate<lf + 2, (ShareValue(1) << (lf + 3))> &sign_intermediate =
-        intermediate.sign_intermediate;
-    MSSshare<lf + 3> &zhat1_lf_3 = intermediate.zhat1_lf_3;
+    FLTshare &x = *input_x;
+    FLTshare &y = *input_y;
+    FLTshare &z = *output_z;
+    MSSshare &zhat1_lf_3 = intermediate.zhat1_lf_3;
     MSSshare_p &c = intermediate.c;
-    MSSshare_mul_res<lf + 3> &zhat2_lf_3 = intermediate.zhat2_lf_3;
-    MSSshare_mul_res<1> &bx_mul_by = intermediate.bx_mul_by;
+    MSSshare_mul_res &zhat2_lf_3 = intermediate.zhat2_lf_3;
+    MSSshare_mul_res &bx_mul_by = intermediate.bx_mul_by;
+
+    PI_fixed_mult_intermediate &fixed_mult_intermediate = intermediate.fixed_mult_intermediate;
+    PI_sign_intermediate &sign_intermediate = intermediate.sign_intermediate;
 
     // Step 1: 计算bx_mul_by
     MSSshare_mul_res_calc_mul(party_id, netio, &bx_mul_by, &x.b, &y.b);
@@ -138,7 +143,7 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     ShareValue zhat1_lf_3_plain = MSSshare_recon(party_id, netio, &zhat1_lf_3);
 
     // Step 3: 计算zhat1_lf_2 = zhat1_lf_3的后lf+2位
-    MSSshare<lf + 2> zhat1_lf_2;
+    MSSshare zhat1_lf_2(lf + 2);
 #ifdef DEBUG_MODE
     zhat1_lf_2.has_preprocess = true;
     zhat1_lf_2.has_shared = true;
@@ -150,11 +155,11 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     PI_sign(party_id, PRGs, netio, sign_intermediate, &zhat1_lf_2, &c);
 
     // Step 5: 生成MSSshare的c
-    MSSshare<lf + 3> c_mss;
+    MSSshare c_mss(lf + 3);
     MSSshare_from_p(&c_mss, &c);
 
     // Step 6: zhat2_lf_3 = zhat1_lf_3 * (2 - c)
-    MSSshare<lf + 3> two_minus_c;
+    MSSshare two_minus_c(lf + 3);
 #ifdef DEBUG_MODE
     two_minus_c.has_preprocess = true;
     two_minus_c.has_shared = true;
@@ -179,7 +184,7 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     }
 
     // Step 8: c (in le bits)
-    MSSshare<le> c_le;
+    MSSshare c_le(le);
 #ifdef DEBUG_MODE
     c_le.has_preprocess = true;
     c_le.has_shared = true;
@@ -190,7 +195,7 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     // Step 9: z.e = x.e + y.e + c_le - 2^(le-1)
     auto s1_vec = make_ptr_vec(x.e, y.e, c_le);
     auto coeff1_vec = std::vector<int>{1, 1, 1};
-    MSSshare_add_res<le> z_e_tmp;
+    MSSshare z_e_tmp(le);
     MSSshare_add_res_preprocess_multi(party_id, &z_e_tmp, s1_vec, coeff1_vec);
     MSSshare_add_res_calc_add_multi(party_id, &z_e_tmp, s1_vec, coeff1_vec);
     z.e = z_e_tmp;
@@ -201,7 +206,7 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     // Step 10: z.b = x.b + y.b - 2 * x.b * y.b
     auto s2_vec = make_ptr_vec(x.b, y.b, bx_mul_by);
     auto coeff2_vec = std::vector<int>{1, 1, -2};
-    MSSshare_add_res<1> z_b_tmp;
+    MSSshare z_b_tmp(1);
     MSSshare_add_res_preprocess_multi(party_id, &z_b_tmp, s2_vec, coeff2_vec);
     MSSshare_add_res_calc_add_multi(party_id, &z_b_tmp, s2_vec, coeff2_vec);
     z.b = z_b_tmp;

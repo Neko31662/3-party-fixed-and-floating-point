@@ -5,15 +5,22 @@
 #include "utils/misc.h"
 #include "utils/permutation.h"
 
-template <int ell, ShareValue k> struct PI_sign_intermediate {
-    constexpr static ShareValue p = nxt_prime(ell);
-    MSSshare_p r_prime{k};
+struct PI_sign_intermediate {
+    int ell;
+    ShareValue k;
+    ShareValue p;
+    MSSshare_p r_prime;
     ShareValue Gamma = 0;
-    std::array<ShareValue, ell> rx_list{};
+    std::vector<ShareValue> rx_list;
     bool Delta;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
+
+    PI_sign_intermediate(int ell, ShareValue k) : p(nxt_prime(ell)), r_prime{k}, rx_list(ell, 0) {
+        this->ell = ell;
+        this->k = k;
+    }
 };
 
 /* 预处理PI_sign_preprocess对象和协议的输出，调用后P0和P1都需要向P2发送暂存的信息
@@ -30,9 +37,8 @@ template <int ell, ShareValue k> struct PI_sign_intermediate {
  * @templateparam ell: 输入分享的位数，输入分享必须在2^ell上
  * @templateparam k: 输出分享的模数
  */
-template <int ell, ShareValue k>
 void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                        PI_sign_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
+                        PI_sign_intermediate &intermediate, MSSshare *input_x,
                         MSSshare_p *output_b);
 
 /* 执行PI_sign协议
@@ -49,14 +55,12 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
  * @templateparam ell: 输入分享的位数，输入分享必须在2^ell上
  * @templateparam k: 输出分享的模数
  */
-template <int ell, ShareValue k>
 void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-             PI_sign_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-             MSSshare_p *output_b);
+             PI_sign_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_b);
 
 template <int ell, ShareValue k>
 void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                 std::vector<PI_sign_intermediate<ell, k> *> &intermediate_vec,
-                 std::vector<MSSshare<ell> *> input_x_vec, std::vector<MSSshare_p *> output_b_vec);
+                 std::vector<PI_sign_intermediate *> &intermediate_vec,
+                 std::vector<MSSshare *> input_x_vec, std::vector<MSSshare_p *> output_b_vec);
 
 #include "protocol/sign.tpp"

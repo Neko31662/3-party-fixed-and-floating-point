@@ -117,14 +117,14 @@ void MSSshare_p_add_plain(const int party_id, MSSshare_p *s, ShareValue x) {
     }
 }
 
-void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
+void MSSshare_p_add_res_preprocess(const int party_id, MSSshare_p *res, MSSshare_p *s1,
                                    MSSshare_p *s2) {
     auto s_vec = make_ptr_vec(*s1, *s2);
     auto coeff_vec = std::vector<int>{1, 1};
     MSSshare_p_add_res_preprocess_multi(party_id, res, s_vec, coeff_vec);
 }
 
-void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p_add_res *res,
+void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p *res,
                                          std::vector<MSSshare_p *> &s_vec,
                                          std::vector<int> &coeff_vec) {
 #ifdef DEBUG_MODE
@@ -157,14 +157,14 @@ void MSSshare_p_add_res_preprocess_multi(const int party_id, MSSshare_p_add_res 
     }
 }
 
-void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p_add_res *res, MSSshare_p *s1,
+void MSSshare_p_add_res_calc_add(const int party_id, MSSshare_p *res, MSSshare_p *s1,
                                  MSSshare_p *s2) {
     auto s_vec = make_ptr_vec(*s1, *s2);
     auto coeff_vec = std::vector<int>{1, 1};
     MSSshare_p_add_res_calc_add_multi(party_id, res, s_vec, coeff_vec);
 }
 
-void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p_add_res *res,
+void MSSshare_p_add_res_calc_add_multi(const int party_id, MSSshare_p *res,
                                        std::vector<MSSshare_p *> &s_vec,
                                        std::vector<int> &coeff_vec) {
 #ifdef DEBUG_MODE

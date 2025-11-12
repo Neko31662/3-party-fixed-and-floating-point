@@ -6,27 +6,32 @@
 #include "utils/misc.h"
 #include "utils/permutation.h"
 
-template <int ell, ShareValue k> struct PI_great_intermediate {
-    std::vector<PI_sign_intermediate<ell, k>> sign_intermediate;
+struct PI_great_intermediate {
+    int ell;
+    ShareValue k;
+    std::vector<PI_sign_intermediate> sign_intermediate;
     std::vector<MSSshare_p> sign_res; // sx, sy, sd=sign(y-x)
 
-    MSSshare_p_mul_res tmp1{k}; // sx*sy
-    MSSshare_p_mul_res tmp2{k}; // (1-sx-sy+2sx*sy)*sd
+    MSSshare_p_mul_res tmp1; // sx*sy
+    MSSshare_p_mul_res tmp2; // (1-sx-sy+2sx*sy)*sd
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
 
-    PI_great_intermediate() : sign_intermediate(3), sign_res(3, MSSshare_p{k}) {}
+    PI_great_intermediate(int ell, ShareValue k) : tmp1(k), tmp2(k) {
+        this->ell = ell;
+        this->k = k;
+        sign_intermediate = std::vector<PI_sign_intermediate>(3, PI_sign_intermediate(ell, k));
+        sign_res = std::vector<MSSshare_p>(3, MSSshare_p{k});
+    }
 };
 
-template <int ell, ShareValue k>
 void PI_great_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_great_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare<ell> *input_y, MSSshare_p_add_res *output_b);
+                         PI_great_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare *input_y, MSSshare_p *output_b);
 
-template <int ell, ShareValue k>
 void PI_great(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_great_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-              MSSshare<ell> *input_y, MSSshare_p_add_res *output_b);
+              PI_great_intermediate &intermediate, MSSshare *input_x,
+              MSSshare *input_y, MSSshare_p *output_b);
 
 #include "protocol/great.tpp"

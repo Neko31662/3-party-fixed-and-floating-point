@@ -5,8 +5,9 @@
 #include "protocol/masked_RSS_p.h"
 #include "utils/misc.h"
 
-template <int ell, ShareValue k> struct PI_eq_intermediate {
-    constexpr static ShareValue p = nxt_prime(ell);
+struct PI_eq_intermediate {
+    ShareValue k;
+    ShareValue p;
     std::vector<ADDshare_p> t_list, rd_list;
     ADDshare_p sigma{p};
 
@@ -14,17 +15,19 @@ template <int ell, ShareValue k> struct PI_eq_intermediate {
     bool has_preprocess = false;
 #endif
 
-    PI_eq_intermediate() : t_list(p, ADDshare_p{k}), rd_list(ell, ADDshare_p{p}) {}
+    PI_eq_intermediate(int ell, ShareValue k) : p(nxt_prime(ell)), sigma(p) {
+        this->k = k;
+        t_list = std::vector<ADDshare_p>(p, ADDshare_p{k});
+        rd_list = std::vector<ADDshare_p>(ell, ADDshare_p{p});
+    }
 };
 
-template <int ell, ShareValue k>
 void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                      PRGSync private_PRG, PI_eq_intermediate<ell, k> &intermediate,
-                      MSSshare<ell> *input_x, MSSshare<ell> *input_y, MSSshare_p *output_b);
+                      PRGSync private_PRG, PI_eq_intermediate &intermediate,
+                      MSSshare *input_x, MSSshare *input_y, MSSshare_p *output_b);
 
-template <int ell, ShareValue k>
 void PI_eq(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-           PI_eq_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x, MSSshare<ell> *input_y,
+           PI_eq_intermediate &intermediate, MSSshare *input_x, MSSshare *input_y,
            MSSshare_p *output_b);
 
 #include "protocol/eq.tpp"

@@ -1,6 +1,5 @@
-template <int ell, ShareValue k>
 void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                        PI_sign_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
+                        PI_sign_intermediate &intermediate, MSSshare *input_x,
                         MSSshare_p *output_b) {
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
@@ -12,19 +11,21 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
     if (output_b->has_preprocess) {
         error("PI_sign_preprocess: output_b has already been preprocessed");
     }
-    if (output_b->p != k) {
+    if (output_b->p != intermediate.k) {
         error("PI_sign_preprocess: output_b modulus mismatch");
     }
     intermediate.has_preprocess = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
     MSSshare_p &b = *output_b;
     MSSshare_p &r_prime = intermediate.r_prime;
     bool &Delta = intermediate.Delta;
     ShareValue &Gamma = intermediate.Gamma;
-    std::array<ShareValue, ell> &rx_list = intermediate.rx_list;
-    ShareValue p = PI_sign_intermediate<ell, k>::p;
+    std::vector<ShareValue> &rx_list = intermediate.rx_list;
+    ShareValue p = intermediate.p;
 
     ShareValue MASK_p = 1;
     int bitp = 1;
@@ -60,7 +61,7 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
     if (party_id == 0) {
         ShareValue rx_hat = (x.v1 + x.v2) & (x.MASK >> 1);
         // 第0个值是最高位，第ell-2个值是最低位
-        std::array<ShareValue, ell - 1> rx_hat_bits;
+        std::vector<ShareValue> rx_hat_bits(ell - 1);
         for (int i = 0; i < ell - 1; i++) {
             rx_hat_bits[i] = (rx_hat >> (ell - 2 - i)) & 1;
             rx_hat_bits[i] = rx_hat_bits[i] ^ 1; // 取反
@@ -104,10 +105,8 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
     }
 }
 
-template <int ell, ShareValue k>
 void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-             PI_sign_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-             MSSshare_p *output_b) {
+             PI_sign_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_b) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_sign: input_x must be shared before calling PI_sign");
@@ -118,19 +117,21 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (!output_b->has_preprocess) {
         error("PI_sign: output_b must be preprocessed before calling PI_sign");
     }
-    if (output_b->p != k) {
+    if (output_b->p != intermediate.k) {
         error("PI_sign: output_b modulus mismatch");
     }
     output_b->has_shared = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
+    MSSshare &x = *input_x;
     MSSshare_p &b = *output_b;
     MSSshare_p &r_prime = intermediate.r_prime;
     bool &Delta = intermediate.Delta;
     ShareValue &Gamma = intermediate.Gamma;
-    std::array<ShareValue, ell> &rx_list = intermediate.rx_list;
-    constexpr ShareValue p = PI_sign_intermediate<ell, k>::p;
+    std::vector<ShareValue> &rx_list = intermediate.rx_list;
+    ShareValue p = intermediate.p;
 
     ShareValue MASK_p = 1;
     int bitp = 1;
@@ -158,7 +159,7 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
     if (party_id == 1 || party_id == 2) {
         // Step 1: 计算mx_list，将rx_list和mx_list最后一位设为0
-        std::array<bool, ell> mx_list{};
+        std::vector<bool> mx_list(ell);
         ShareValue mx_hat = (x.v1) & (x.MASK >> 1);
         // 第0个值是最高位，第ell-2个值是最低位
         for (int i = 0; i < ell - 1; i++) {
@@ -168,7 +169,7 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         rx_list[ell - 1] = party_id - 1;
 
         // Step 2: 计算xor_list
-        std::array<ShareValue, ell> xor_list{};
+        std::vector<ShareValue> xor_list(ell);
         for (int i = 0; i < ell; i++) {
             xor_list[i] = (rx_list[i] - 2 * mx_list[i] * rx_list[i] + 2 * p * p) % p;
             if (party_id == 1) {
@@ -177,7 +178,7 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         }
 
         // Step3: 计算pre_list
-        std::array<ShareValue, ell> pre_list{};
+        std::vector<ShareValue> pre_list(ell);
         ShareValue sum = 0;
         for (int i = 0; i < ell; i++) {
             sum = (sum + xor_list[i]) % p;
@@ -189,8 +190,8 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
         // Step4: 计算encode_list
         bool mx_sign = ((x.v1 & x.MASK) >> (ell - 1));
-        std::array<ShareValue, ell> encode_list{};
-        std::array<ShareValue, ell> w_list{};
+        std::vector<ShareValue> encode_list(ell);
+        std::vector<ShareValue> w_list(ell);
         for (int i = 0; i < ell; i++) {
             PRGs[1].gen_random_data(&w_list[i], sizeof(ShareValue));
             w_list[i] = (w_list[i] % (p - 1)) + 1; // 确保w在1~p-1之间
@@ -232,7 +233,7 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         netio.recv_data(2, tmp2.data(), bytelen);
         msg2.from_char_array(tmp2.data(), bytelen);
 
-        std::array<ShareValue, ell> encode_list{};
+        std::vector<ShareValue> encode_list(ell);
         for (int i = 0; i < ell; i++) {
             ShareValue val = 0;
             msg1.read_msg((char *)&val, bitp);
@@ -277,18 +278,17 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     }
 }
 
-template <int ell, ShareValue k>
 void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                 std::vector<PI_sign_intermediate<ell, k> *> &intermediate_vec,
-                 std::vector<MSSshare<ell> *> input_x_vec, std::vector<MSSshare_p *> output_b_vec) {
+                 std::vector<PI_sign_intermediate *> &intermediate_vec,
+                 std::vector<MSSshare *> input_x_vec, std::vector<MSSshare_p *> output_b_vec) {
 #ifdef DEBUG_MODE
     if (input_x_vec.size() != intermediate_vec.size() ||
         output_b_vec.size() != intermediate_vec.size()) {
         error("PI_sign_vec: input vector sizes do not match");
     }
     for (size_t i = 0; i < input_x_vec.size(); i++) {
-        MSSshare<ell> *input_x = input_x_vec[i];
-        PI_sign_intermediate<ell, k> &intermediate = *intermediate_vec[i];
+        MSSshare *input_x = input_x_vec[i];
+        PI_sign_intermediate &intermediate = *intermediate_vec[i];
         MSSshare_p *output_b = output_b_vec[i];
         if (!input_x->has_shared) {
             error("PI_sign: input_x must be shared before calling PI_sign");
@@ -299,15 +299,17 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         if (!output_b->has_preprocess) {
             error("PI_sign: output_b must be preprocessed before calling PI_sign");
         }
-        if (output_b->p != k) {
+        if (output_b->p != intermediate.k) {
             error("PI_sign: output_b modulus mismatch");
         }
         output_b->has_shared = true;
     }
 #endif
 
-    constexpr ShareValue p = PI_sign_intermediate<ell, k>::p;
+    const ShareValue p = intermediate_vec[0]->p;
     const int vec_size = input_x_vec.size();
+    int ell = intermediate_vec[0]->ell;
+    ShareValue k = intermediate_vec[0]->k;
 
     ShareValue MASK_p = 1;
     int bitp = 1;
@@ -333,16 +335,16 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         msg1.from_char_array(tmp1.data(), (bitk * vec_size + 7) / 8);
     }
     for (size_t i = 0; i < vec_size; i++) {
-        MSSshare<ell> *input_x = input_x_vec[i];
-        PI_sign_intermediate<ell, k> &intermediate = *intermediate_vec[i];
+        MSSshare *input_x = input_x_vec[i];
+        PI_sign_intermediate &intermediate = *intermediate_vec[i];
         MSSshare_p *output_b = output_b_vec[i];
 
-        MSSshare<ell> &x = *input_x;
+        MSSshare &x = *input_x;
         MSSshare_p &b = *output_b;
         MSSshare_p &r_prime = intermediate.r_prime;
         bool &Delta = intermediate.Delta;
         ShareValue &Gamma = intermediate.Gamma;
-        std::array<ShareValue, ell> &rx_list = intermediate.rx_list;
+        std::vector<ShareValue> &rx_list = intermediate.rx_list;
 
         if (party_id == 2) {
             msg1.add_msg((char *)&Gamma, bitk);
@@ -360,19 +362,19 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (party_id == 1 || party_id == 2) {
         encoded_msg msg2;
         for (size_t i = 0; i < vec_size; i++) {
-            MSSshare<ell> *input_x = input_x_vec[i];
-            PI_sign_intermediate<ell, k> &intermediate = *intermediate_vec[i];
+            MSSshare *input_x = input_x_vec[i];
+            PI_sign_intermediate &intermediate = *intermediate_vec[i];
             MSSshare_p *output_b = output_b_vec[i];
 
-            MSSshare<ell> &x = *input_x;
+            MSSshare &x = *input_x;
             MSSshare_p &b = *output_b;
             MSSshare_p &r_prime = intermediate.r_prime;
             bool &Delta = intermediate.Delta;
             ShareValue &Gamma = intermediate.Gamma;
-            std::array<ShareValue, ell> &rx_list = intermediate.rx_list;
+            std::vector<ShareValue> &rx_list = intermediate.rx_list;
 
             // Step 1: 计算mx_list，将rx_list和mx_list最后一位设为0
-            std::array<bool, ell> mx_list{};
+            std::vector<bool> mx_list(ell);
             ShareValue mx_hat = (x.v1) & (x.MASK >> 1);
             // 第0个值是最高位，第ell-2个值是最低位
             for (int i = 0; i < ell - 1; i++) {
@@ -382,7 +384,7 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
             rx_list[ell - 1] = party_id - 1;
 
             // Step 2: 计算xor_list
-            std::array<ShareValue, ell> xor_list{};
+            std::vector<ShareValue> xor_list(ell);
             for (int i = 0; i < ell; i++) {
                 xor_list[i] = (rx_list[i] - 2 * mx_list[i] * rx_list[i] + 2 * p * p) % p;
                 if (party_id == 1) {
@@ -391,7 +393,7 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
             }
 
             // Step3: 计算pre_list
-            std::array<ShareValue, ell> pre_list{};
+            std::vector<ShareValue> pre_list(ell);
             ShareValue sum = 0;
             for (int i = 0; i < ell; i++) {
                 sum = (sum + xor_list[i]) % p;
@@ -403,8 +405,8 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
             // Step4: 计算encode_list
             bool mx_sign = ((x.v1 & x.MASK) >> (ell - 1));
-            std::array<ShareValue, ell> encode_list{};
-            std::array<ShareValue, ell> w_list{};
+            std::vector<ShareValue> encode_list(ell);
+            std::vector<ShareValue> w_list(ell);
             for (int i = 0; i < ell; i++) {
                 PRGs[1].gen_random_data(&w_list[i], sizeof(ShareValue));
                 w_list[i] = (w_list[i] % (p - 1)) + 1; // 确保w在1~p-1之间
@@ -452,18 +454,18 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
         for (size_t i = 0; i < vec_size; i++) {
 
-            MSSshare<ell> *input_x = input_x_vec[i];
-            PI_sign_intermediate<ell, k> &intermediate = *intermediate_vec[i];
+            MSSshare *input_x = input_x_vec[i];
+            PI_sign_intermediate &intermediate = *intermediate_vec[i];
             MSSshare_p *output_b = output_b_vec[i];
 
-            MSSshare<ell> &x = *input_x;
+            MSSshare &x = *input_x;
             MSSshare_p &b = *output_b;
             MSSshare_p &r_prime = intermediate.r_prime;
             bool &Delta = intermediate.Delta;
             ShareValue &Gamma = intermediate.Gamma;
-            std::array<ShareValue, ell> &rx_list = intermediate.rx_list;
+            std::vector<ShareValue> &rx_list = intermediate.rx_list;
 
-            std::array<ShareValue, ell> encode_list{};
+            std::vector<ShareValue> encode_list(ell);
             for (int i = 0; i < ell; i++) {
                 ShareValue val = 0;
                 msg2_1.read_msg((char *)&val, bitp);
@@ -509,16 +511,16 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         msg3.from_char_array(tmp3.data(), bytelen);
         for (size_t i = 0; i < vec_size; i++) {
 
-            MSSshare<ell> *input_x = input_x_vec[i];
-            PI_sign_intermediate<ell, k> &intermediate = *intermediate_vec[i];
+            MSSshare *input_x = input_x_vec[i];
+            PI_sign_intermediate &intermediate = *intermediate_vec[i];
             MSSshare_p *output_b = output_b_vec[i];
 
-            MSSshare<ell> &x = *input_x;
+            MSSshare &x = *input_x;
             MSSshare_p &b = *output_b;
             MSSshare_p &r_prime = intermediate.r_prime;
             bool &Delta = intermediate.Delta;
             ShareValue &Gamma = intermediate.Gamma;
-            std::array<ShareValue, ell> &rx_list = intermediate.rx_list;
+            std::vector<ShareValue> &rx_list = intermediate.rx_list;
 
             // Step 9: 接收masked_t并计算最终结果b
             ShareValue masked_t = 0;

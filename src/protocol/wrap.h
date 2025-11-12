@@ -10,38 +10,63 @@
 // 命名规则：wrap1表示只考虑m+r的进位，wrap2表示还要考虑r1+r2的进位
 // wrap1/2_spec表示确定输入的x首bit为0时的wrap协议
 
-template <int ell, ShareValue k> struct PI_wrap1_spec_intermediate {
+struct PI_wrap1_spec_intermediate {
+    int ell;
+    ShareValue k;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
-    ADDshare_p rx0{k};
+    ADDshare_p rx0;
+    PI_wrap1_spec_intermediate(int ell, ShareValue k) : rx0(k) {
+        this->ell = ell;
+        this->k = k;
+    }
 };
 
-template <int ell, ShareValue k> struct PI_wrap2_spec_intermediate {
+struct PI_wrap2_spec_intermediate {
+    int ell;
+    ShareValue k;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
-    PI_wrap1_spec_intermediate<ell, k> wrap1_intermediate;
-    ADDshare_p b{k};
+    PI_wrap1_spec_intermediate wrap1_intermediate;
+    ADDshare_p b;
+    PI_wrap2_spec_intermediate(int ell, ShareValue k) : b(k), wrap1_intermediate(ell, k) {
+        this->ell = ell;
+        this->k = k;
+    }
 };
 
-template <int ell, ShareValue k> struct PI_wrap1_intermediate {
+struct PI_wrap1_intermediate {
+    int ell;
+    ShareValue k;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
-    MSSshare<ell + 1> tmpx;
-    PI_sign_intermediate<ell + 1, k> sign_intermediate;
-    MSSshare_p b{k};
-    MSSshare_p c{k};
-    MSSshare_p_mul_res b_mul_c{k};
+    MSSshare tmpx;
+    PI_sign_intermediate sign_intermediate;
+    MSSshare_p b;
+    MSSshare_p c;
+    MSSshare_p_mul_res b_mul_c;
+    PI_wrap1_intermediate(int ell, ShareValue k)
+        : tmpx(ell + 1), sign_intermediate(ell + 1, k), b{k}, c{k}, b_mul_c{k} {
+        this->ell = ell;
+        this->k = k;
+    }
 };
 
-template <int ell, ShareValue k> struct PI_wrap2_intermediate {
+struct PI_wrap2_intermediate {
+    int ell;
+    ShareValue k;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
-    PI_wrap1_intermediate<ell, k> wrap1_intermediate;
-    MSSshare_p_add_res d{k}; // d is the output of wrap1
+    PI_wrap1_intermediate wrap1_intermediate;
+    MSSshare_p d; // d is the output of wrap1
+    PI_wrap2_intermediate(int ell, ShareValue k) : d{k}, wrap1_intermediate(ell, k) {
+        this->ell = ell;
+        this->k = k;
+    }
 };
 
 /* 预处理PI_wrap1_spec_intermediate对象和协议的输出
@@ -58,57 +83,47 @@ template <int ell, ShareValue k> struct PI_wrap2_intermediate {
  * @templateparam ell: 输入分享的位数，输入分享必须在2^ell上
  * @templateparam k: 输出分享的模数
  */
-template <int ell, ShareValue k>
 void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_wrap1_spec_intermediate<ell, k> &intermediate,
-                              MSSshare<ell> *input_x, MSSshare_p *output_z);
+                              PI_wrap1_spec_intermediate &intermediate, MSSshare *input_x,
+                              MSSshare_p *output_z);
 
 /* 与PI_wrap1_spec_preprocess类似
  */
-template <int ell, ShareValue k>
 void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_wrap2_spec_intermediate<ell, k> &intermediate,
-                              MSSshare<ell> *input_x, MSSshare_p *output_z);
+                              PI_wrap2_spec_intermediate &intermediate, MSSshare *input_x,
+                              MSSshare_p *output_z);
 
 /* 执行PI_wrap1_spec协议
  */
-template <int ell, ShareValue k>
 void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_wrap1_spec_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
+                   PI_wrap1_spec_intermediate &intermediate, MSSshare *input_x,
                    MSSshare_p *output_z);
 
 /* 执行PI_wrap2_spec协议
  */
-template <int ell, ShareValue k>
 void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_wrap2_spec_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
+                   PI_wrap2_spec_intermediate &intermediate, MSSshare *input_x,
                    MSSshare_p *output_z);
 
 /* 预处理PI_wrap1_intermediate对象和协议的输出
  */
-template <int ell, ShareValue k>
 void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_wrap1_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare_p_add_res *output_z);
+                         PI_wrap1_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare_p *output_z);
 
 /* 预处理PI_wrap2_intermediate对象和协议的输出
  */
-template <int ell, ShareValue k>
 void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_wrap2_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare_p_add_res *output_z);
+                         PI_wrap2_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare_p *output_z);
 
 /* 执行PI_wrap1协议
  */
-template <int ell, ShareValue k>
 void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_wrap1_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-              MSSshare_p_add_res *output_z);
+              PI_wrap1_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z);
 
 /* 执行PI_wrap2协议
  */
-template <int ell, ShareValue k>
 void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_wrap2_intermediate<ell, k> &intermediate, MSSshare<ell> *input_x,
-              MSSshare_p_add_res *output_z);
+              PI_wrap2_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z);
 #include "protocol/wrap.tpp"

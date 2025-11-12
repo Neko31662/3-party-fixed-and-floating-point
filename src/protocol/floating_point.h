@@ -2,16 +2,24 @@
 #include "config/config.h"
 #include "protocol/masked_RSS.h"
 #include "utils/misc.h"
-template <int lf, int le> class FLTshare {
+
+class FLTshare {
   public:
+    int lf;
+    int le;
     // value = (-1)^b * t * 2^(e - 2^(le-1))
-    MSSshare<1> b;
-    MSSshare<lf + 2> t;
-    MSSshare<le> e;
+    MSSshare b;
+    MSSshare t;
+    MSSshare e;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
     bool has_shared = false;
 #endif
+
+    FLTshare(int lf, int le) : b(1), t(lf + 2), e(le) {
+        this->lf = lf;
+        this->le = le;
+    }
 };
 
 class FLTplain {
@@ -25,9 +33,8 @@ class FLTplain {
 // ======================= implementation ========================
 // ===============================================================
 
-template <int lf, int le>
 inline void FLTshare_preprocess(const int secret_holder_id, const int party_id,
-                                std::vector<PRGSync> &PRGs, NetIOMP &netio, FLTshare<lf, le> *x) {
+                                std::vector<PRGSync> &PRGs, NetIOMP &netio, FLTshare *x) {
 #ifdef DEBUG_MODE
     if (x->has_preprocess) {
         error("FLTshare_preprocess has already been called on this object");
@@ -39,9 +46,8 @@ inline void FLTshare_preprocess(const int secret_holder_id, const int party_id,
     MSSshare_preprocess(secret_holder_id, party_id, PRGs, netio, &x->e);
 }
 
-template <int lf, int le>
 inline void FLTshare_share_from(const int secret_holder_id, const int party_id, NetIOMP &netio,
-                                FLTshare<lf, le> *x, bool b, ShareValue t, ShareValue e) {
+                                FLTshare *x, bool b, ShareValue t, ShareValue e) {
 #ifdef DEBUG_MODE
     if (!x->has_preprocess) {
         error("FLTshare_share_from: x must be preprocessed before calling FLTshare_share_from");
@@ -53,9 +59,8 @@ inline void FLTshare_share_from(const int secret_holder_id, const int party_id, 
     MSSshare_share_from(secret_holder_id, party_id, netio, &x->e, e);
 }
 
-template <int lf, int le>
-inline void FLTshare_share_from_store(const int party_id, NetIOMP &netio, FLTshare<lf, le> *x,
-                                      bool b, ShareValue t, ShareValue e) {
+inline void FLTshare_share_from_store(const int party_id, NetIOMP &netio, FLTshare *x, bool b,
+                                      ShareValue t, ShareValue e) {
 #ifdef DEBUG_MODE
     if (!x->has_preprocess) {
         error("FLTshare_share_from_store: x must be preprocessed before calling "
@@ -68,8 +73,7 @@ inline void FLTshare_share_from_store(const int party_id, NetIOMP &netio, FLTsha
     MSSshare_share_from_store(party_id, netio, &x->e, e);
 }
 
-template <int lf, int le>
-inline FLTplain FLTshare_recon(const int party_id, NetIOMP &netio, FLTshare<lf, le> *s) {
+inline FLTplain FLTshare_recon(const int party_id, NetIOMP &netio, FLTshare *s) {
     FLTplain result;
     result.b = MSSshare_recon(party_id, netio, &s->b);
     result.t = MSSshare_recon(party_id, netio, &s->t);

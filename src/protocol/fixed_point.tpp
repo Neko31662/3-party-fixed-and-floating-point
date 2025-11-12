@@ -1,8 +1,9 @@
-template <int li, int lf, int l_res>
 void PI_fixed_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                              PI_fixed_mult_intermediate<li, lf, l_res> &PI_fixed_mult_intermediate,
-                              MSSshare<li + lf> *input_x, MSSshare<li + lf> *input_y,
-                              MSSshare<l_res> *output_z) {
+                              PI_fixed_mult_intermediate &PI_fixed_mult_intermediate,
+                              MSSshare *input_x, MSSshare *input_y, MSSshare *output_z) {
+    int li = PI_fixed_mult_intermediate.li;
+    int lf = PI_fixed_mult_intermediate.lf;
+    int l_res = PI_fixed_mult_intermediate.l_res;
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error("PI_fixed_mult_preprocess: input_x must be preprocessed before calling "
@@ -18,20 +19,23 @@ void PI_fixed_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     if (PI_fixed_mult_intermediate.has_preprocess) {
         error("PI_fixed_mult_preprocess has already been called on this object");
     }
+    if (input_x->BITLEN != li + lf || input_y->BITLEN != li + lf || output_z->BITLEN != l_res) {
+        error("PI_fixed_mult_preprocess: input_x, input_y or output_z bitlength mismatch");
+    }
     PI_fixed_mult_intermediate.has_preprocess = true;
 #endif
 
     const int l_input = li + lf;
-    MSSshare<l_input> &x = *input_x;
-    MSSshare<l_input> &y = *input_y;
-    MSSshare<l_res> &z = *output_z;
-    ADDshare<lf + l_res> &Gamma = PI_fixed_mult_intermediate.Gamma;
-    ADDshare<lf + l_res - l_input> *lf_share1 = PI_fixed_mult_intermediate.lf_share1;
-    ADDshare<lf + l_res - l_input> *lf_share2 = PI_fixed_mult_intermediate.lf_share2;
-    ADDshare<lf + l_res - l_input> *lf_share3 = PI_fixed_mult_intermediate.lf_share3;
+    MSSshare &x = *input_x;
+    MSSshare &y = *input_y;
+    MSSshare &z = *output_z;
+    ADDshare<> &Gamma = PI_fixed_mult_intermediate.Gamma;
+    ADDshare<> *lf_share1 = PI_fixed_mult_intermediate.lf_share1;
+    ADDshare<> *lf_share2 = PI_fixed_mult_intermediate.lf_share2;
+    ADDshare<> *lf_share3 = PI_fixed_mult_intermediate.lf_share3;
 
     // Step 1: 将x和y视为lf + l_res位的分享
-    MSSshare<l_input> input_origin[2] = {x, y};
+    MSSshare input_origin[2] = {x, y};
     input_origin[0].v1 &= input_origin[0].MASK;
     input_origin[0].v2 &= input_origin[0].MASK;
     input_origin[1].v1 &= input_origin[1].MASK;
@@ -90,11 +94,12 @@ void PI_fixed_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     MSSshare_preprocess(0, party_id, PRGs, netio, &z);
 }
 
-template <int li, int lf, int l_res>
 void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                   PI_fixed_mult_intermediate<li, lf, l_res> &PI_fixed_mult_intermediate,
-                   MSSshare<li + lf> *input_x, MSSshare<li + lf> *input_y,
-                   MSSshare<l_res> *output_z, bool has_offset) {
+                   PI_fixed_mult_intermediate &PI_fixed_mult_intermediate, MSSshare *input_x,
+                   MSSshare *input_y, MSSshare *output_z, bool has_offset) {
+    int li = PI_fixed_mult_intermediate.li;
+    int lf = PI_fixed_mult_intermediate.lf;
+    int l_res = PI_fixed_mult_intermediate.l_res;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_fixed_mult: input_x must be shared before calling PI_fixed_mult");
@@ -109,6 +114,9 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (!output_z->has_preprocess) {
         error("PI_fixed_mult: output_z must be preprocessed before calling PI_fixed_mult");
     }
+    if (input_x->BITLEN != li + lf || input_y->BITLEN != li + lf || output_z->BITLEN != l_res) {
+        error("PI_fixed_mult_preprocess: input_x, input_y or output_z bitlength mismatch");
+    }
     output_z->has_shared = true;
 #endif
     if (party_id == 0) {
@@ -116,16 +124,16 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     }
 
     const int l_input = li + lf;
-    MSSshare<l_input> &x = *input_x;
-    MSSshare<l_input> &y = *input_y;
-    MSSshare<l_res> &z = *output_z;
-    ADDshare<lf + l_res> &Gamma = PI_fixed_mult_intermediate.Gamma;
-    ADDshare<lf + l_res - l_input> *lf_share1 = PI_fixed_mult_intermediate.lf_share1;
-    ADDshare<lf + l_res - l_input> *lf_share2 = PI_fixed_mult_intermediate.lf_share2;
-    ADDshare<lf + l_res - l_input> *lf_share3 = PI_fixed_mult_intermediate.lf_share3;
+    MSSshare &x = *input_x;
+    MSSshare &y = *input_y;
+    MSSshare &z = *output_z;
+    ADDshare<> &Gamma = PI_fixed_mult_intermediate.Gamma;
+    ADDshare<> *lf_share1 = PI_fixed_mult_intermediate.lf_share1;
+    ADDshare<> *lf_share2 = PI_fixed_mult_intermediate.lf_share2;
+    ADDshare<> *lf_share3 = PI_fixed_mult_intermediate.lf_share3;
 
     // Step 1: 如果有offset，将x和y的m加上2^(l-2)，之后视为lf + l_res位的分享
-    MSSshare<l_input> input_origin[2] = {x, y};
+    MSSshare input_origin[2] = {x, y};
     for (int i = 0; i < 2; i++) {
         if (has_offset) {
             input_origin[i].v1 += (ShareValue(1) << (l_input - 2));
@@ -134,7 +142,7 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         input_origin[i].v2 &= input_origin[i].MASK;
     }
 
-    ADDshare<lf + l_res> mz_share; // 结果的m值的分享
+    ADDshare mz_share(lf + l_res); // 结果的m值的分享
 #ifdef DEBUG_MODE
     mz_share.has_shared = true;
 #endif
@@ -216,7 +224,7 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     mz_share.v -= z.v2;
 
     // Step 2.11: 取模到l_res位
-    ADDshare<l_res> mz_share2;
+    ADDshare mz_share2(l_res);
 #ifdef DEBUG_MODE
     mz_share2.has_shared = true;
 #endif

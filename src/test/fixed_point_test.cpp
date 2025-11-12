@@ -39,15 +39,15 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int test_i = 0; test_i < test_nums; test_i++) {
-        MSSshare<li + lf> x_share, y_share;
-        MSSshare<l_res> z_share;
-        PI_fixed_mult_intermediate<li, lf, l_res> intermediate;
+        MSSshare x_share(li + lf), y_share(li + lf);
+        MSSshare z_share(l_res);
+        PI_fixed_mult_intermediate intermediate(li, lf, l_res);
 
         // preprocess
         MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
         MSSshare_preprocess(0, party_id, PRGs, *netio, &y_share);
-        PI_fixed_mult_preprocess<li, lf, l_res>(party_id, PRGs, *netio, intermediate, &x_share,
-                                                &y_share, &z_share);
+        PI_fixed_mult_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &y_share,
+                                 &z_share);
 
         if (party_id == 0) {
             netio->send_stored_data(2);
@@ -67,8 +67,7 @@ int main(int argc, char **argv) {
         MSSshare_share_from(0, party_id, *netio, &y_share, y_plain);
 
         // compute
-        PI_fixed_mult<li, lf, l_res>(party_id, PRGs, *netio, intermediate, &x_share, &y_share,
-                                     &z_share);
+        PI_fixed_mult(party_id, PRGs, *netio, intermediate, &x_share, &y_share, &z_share);
 
         // reconstruct
         ShareValue x_recon, y_recon, z_recon;

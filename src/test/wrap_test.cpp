@@ -43,9 +43,9 @@ int main(int argc, char **argv) {
         ShareValue plain_x;
         private_PRG.gen_random_data(&plain_x, sizeof(ShareValue));
         plain_x = plain_x & ((ShareValue(1) << (ell - 1)) - 1);
-        MSSshare<ell> x_share;
-        PI_wrap1_spec_intermediate<ell, k> intermediate1;
-        PI_wrap2_spec_intermediate<ell, k> intermediate2;
+        MSSshare x_share(ell);
+        PI_wrap1_spec_intermediate intermediate1(ell, k);
+        PI_wrap2_spec_intermediate intermediate2(ell, k);
         MSSshare_p z1_share{k};
         MSSshare_p z2_share{k};
 
@@ -119,11 +119,11 @@ int main(int argc, char **argv) {
         ShareValue plain_x;
         private_PRG.gen_random_data(&plain_x, sizeof(ShareValue));
         plain_x = plain_x & ((ShareValue(1) << (ell)) - 1);
-        MSSshare<ell> x_share;
-        PI_wrap1_intermediate<ell, k> intermediate1;
-        PI_wrap2_intermediate<ell, k> intermediate2;
-        MSSshare_p_add_res z1_share{k};
-        MSSshare_p_add_res z2_share{k};
+        MSSshare x_share(ell);
+        PI_wrap1_intermediate intermediate1(ell, k);
+        PI_wrap2_intermediate intermediate2(ell, k);
+        MSSshare_p z1_share{k};
+        MSSshare_p z2_share{k};
 
         // preprocess
         MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);

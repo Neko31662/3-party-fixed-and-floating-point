@@ -1,6 +1,6 @@
-template <int ell, typename ShareType>
+template <typename ShareType>
 void ADDshare_share_from(const int secret_holder_id, const int party_id, std::vector<PRGSync> &PRGs,
-                         NetIOMP &netio, ADDshare<ell, ShareType> *s, ShareType x) {
+                         NetIOMP &netio, ADDshare<ShareType> *s, ShareType x) {
 #ifdef DEBUG_MODE
     s->has_shared = true;
 #endif
@@ -33,9 +33,9 @@ void ADDshare_share_from(const int secret_holder_id, const int party_id, std::ve
     }
 }
 
-template <int ell, typename ShareType>
+template <typename ShareType>
 void ADDshare_share_from_store(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                               ADDshare<ell, ShareType> *s, ShareType x) {
+                               ADDshare<ShareType> *s, ShareType x) {
 #ifdef DEBUG_MODE
     s->has_shared = true;
 #endif
@@ -52,9 +52,9 @@ void ADDshare_share_from_store(const int party_id, std::vector<PRGSync> &PRGs, N
     }
 }
 
-template <int ell, typename ShareType>
+template <typename ShareType>
 void ADDshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                 ADDshare_mul_res<ell, ShareType> *res) {
+                                 ADDshare_mul_res<ShareType> *res) {
 #ifdef DEBUG_MODE
     res->has_preprocess = true;
 #endif
@@ -94,10 +94,9 @@ void ADDshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs,
     }
 }
 
-template <int ell, typename ShareType>
-void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio,
-                               ADDshare_mul_res<ell, ShareType> *res, ADDshare<ell, ShareType> *s1,
-                               ADDshare<ell, ShareType> *s2) {
+template <typename ShareType>
+void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio, ADDshare_mul_res<ShareType> *res,
+                               ADDshare<ShareType> *s1, ADDshare<ShareType> *s2) {
 #ifdef DEBUG_MODE
     if (!s1->has_shared || !s2->has_shared) {
         error("ADDshare_mul_res_cal_mult requires both inputs to have been shared");
@@ -135,11 +134,11 @@ void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio,
     }
 }
 
-template <int ell, typename ShareType>
+template <typename ShareType>
 void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
-                                   const std::vector<ADDshare_mul_res<ell, ShareType> *> &res,
-                                   const std::vector<ADDshare<ell, ShareType> *> &s1,
-                                   const std::vector<ADDshare<ell, ShareType> *> &s2) {
+                                   const std::vector<ADDshare_mul_res<ShareType> *> &res,
+                                   const std::vector<ADDshare<ShareType> *> &s1,
+                                   const std::vector<ADDshare<ShareType> *> &s2) {
     int len = res.size();
 #ifdef DEBUG_MODE
     if (s1.size() != len || s2.size() != len) {
@@ -155,6 +154,7 @@ void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
     if (party_id == 0) {
         return;
     }
+    int ell = res[0]->BITLEN;
 
     std::vector<ShareType> d(len), e(len);
     for (int i = 0; i < len; i++) {
@@ -195,8 +195,8 @@ void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
     }
 }
 
-template <int ell, typename ShareType>
-ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell, ShareType> *s) {
+template <typename ShareType>
+ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ShareType> *s) {
 #ifdef DEBUG_MODE
     if (!s->has_shared) {
         error("ADDshare_recon requires the input to have been shared");
@@ -217,7 +217,8 @@ ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ell, Share
     return total;
 }
 
-template <int ell> inline void ADDshare_from_p(ADDshare<ell> *to, ADDshare_p *from) {
+template <typename ShareType>
+inline void ADDshare_from_p(ADDshare<ShareType> *to, ADDshare_p *from) {
 #ifdef DEBUG_MODE
     if (from->p != to->MASK + 1) {
         error("ADDshare_from_p: modulus mismatch");
@@ -227,8 +228,8 @@ template <int ell> inline void ADDshare_from_p(ADDshare<ell> *to, ADDshare_p *fr
     to->v = from->v;
 }
 
-template <int ell>
-inline void ADDshare_mul_res_from_p(ADDshare_mul_res<ell> *to, ADDshare_p_mul_res *from) {
+template <typename ShareType>
+inline void ADDshare_mul_res_from_p(ADDshare_mul_res<ShareType> *to, ADDshare_p_mul_res *from) {
 #ifdef DEBUG_MODE
     if (from->p != to->MASK + 1) {
         error("ADDshare_mul_res_from_p: modulus mismatch");

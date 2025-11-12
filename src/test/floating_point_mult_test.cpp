@@ -39,8 +39,8 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int test_i = 0; test_i < test_nums; test_i++) {
-        FLTshare<lf, le> x_share, y_share, z_share;
-        PI_float_mult_intermediate<lf, le> intermediate;
+        FLTshare x_share(lf, le), y_share(lf, le), z_share(lf, le);
+        PI_float_mult_intermediate intermediate(lf, le);
 
         // preprocess
         FLTshare_preprocess(0, party_id, PRGs, *netio, &x_share);
@@ -59,15 +59,15 @@ int main(int argc, char **argv) {
             private_PRG.gen_random_data(&x_b, sizeof(ShareValue));
             private_PRG.gen_random_data(&x_t, sizeof(ShareValue));
             private_PRG.gen_random_data(&x_e, sizeof(ShareValue));
-            x_b &= MSSshare<1>::MASK;
-            x_t &= MSSshare<lf + 1>::MASK;
-            x_e &= MSSshare<le - 1>::MASK;
+            x_b &= 1;
+            x_t &= ShareValue(1) << (lf + 1) - 1;
+            x_e &= ShareValue(1) << (le - 1) - 1;
             private_PRG.gen_random_data(&y_b, sizeof(ShareValue));
             private_PRG.gen_random_data(&y_t, sizeof(ShareValue));
             private_PRG.gen_random_data(&y_e, sizeof(ShareValue));
-            y_b &= MSSshare<1>::MASK;
-            y_t &= MSSshare<lf + 1>::MASK;
-            y_e &= MSSshare<le - 1>::MASK;
+            y_b &= 1;
+            y_t &= ShareValue(1) << (lf + 1) - 1;
+            y_e &= ShareValue(1) << (le - 1) - 1;
 
             x_t |= (ShareValue(1) << lf);
             y_t |= (ShareValue(1) << lf);

@@ -41,17 +41,9 @@ int main(int argc, char **argv) {
     // 非向量测试
     {
         for (int i = 0; i < test_nums; i++) {
-            ShareValue test_value = i;
-            if (i % 3 == 1) {
-                test_value = ((ShareValue(1) << ell) - i) & MSSshare<ell>::MASK;
-            }
-            if (i % 3 == 2) {
-                private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
-                test_value &= MSSshare<ell>::MASK;
-            }
 
-            PI_sign_intermediate<ell, k> intermediate;
-            MSSshare<ell> x_share;
+            PI_sign_intermediate intermediate(ell, k);
+            MSSshare x_share(ell);
             MSSshare_p b_share{k};
 
             // preprocess
@@ -60,7 +52,16 @@ int main(int argc, char **argv) {
             if (party_id == 0 || party_id == 1) {
                 netio->send_stored_data(2);
             }
+
             // share
+            ShareValue test_value = i;
+            if (i % 3 == 1) {
+                test_value = ((ShareValue(1) << ell) - i) & x_share.MASK;
+            }
+            if (i % 3 == 2) {
+                private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
+                test_value &= x_share.MASK;
+            }
             MSSshare_share_from(0, party_id, *netio, &x_share, test_value);
 
             // compute
@@ -82,17 +83,9 @@ int main(int argc, char **argv) {
     {
         int vec_size = 10;
         for (int i = 0; i < max(1, test_nums / vec_size); i++) {
-            ShareValue test_value = i;
-            if (i % 3 == 1) {
-                test_value = ((ShareValue(1) << ell) - i) & MSSshare<ell>::MASK;
-            }
-            if (i % 3 == 2) {
-                private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
-                test_value &= MSSshare<ell>::MASK;
-            }
 
-            vector<PI_sign_intermediate<ell, k>> intermediate(vec_size);
-            vector<MSSshare<ell>> x_share(vec_size);
+            vector<PI_sign_intermediate> intermediate(vec_size, PI_sign_intermediate(ell, k));
+            vector<MSSshare> x_share(vec_size, MSSshare(ell));
             vector<MSSshare_p> b_share(vec_size, MSSshare_p{k});
 
             // preprocess
@@ -104,7 +97,16 @@ int main(int argc, char **argv) {
             if (party_id == 0 || party_id == 1) {
                 netio->send_stored_data(2);
             }
+
             // share
+            ShareValue test_value = i;
+            if (i % 3 == 1) {
+                test_value = ((ShareValue(1) << ell) - i) & x_share[0].MASK;
+            }
+            if (i % 3 == 2) {
+                private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
+                test_value &= x_share[0].MASK;
+            }
             for (int j = 0; j < vec_size; j++) {
                 MSSshare_share_from(0, party_id, *netio, &x_share[j], test_value);
             }

@@ -43,9 +43,9 @@ int main(int argc, char **argv) {
         {
             const int ell = 60;
             // shares allocation
-            std::vector<MSSshare<ell>> s(len);
-            MSSshare_add_res<ell> s_add;
-            MSSshare_mul_res<ell> s_mul;
+            std::vector<MSSshare> s(len, MSSshare(ell));
+            MSSshare s_add(ell);
+            MSSshare_mul_res s_mul(ell);
 
             for (int i = 0; i < (int)s.size(); i++) {
                 MSSshare_preprocess(i % 3, party_id, PRGs, *netio, &s[i]);
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
             const ShareValue p = 67676767;
             // shares allocation
             std::vector<MSSshare_p> s(len, p);
-            MSSshare_p_add_res s_add(p);
+            MSSshare_p s_add(p);
             MSSshare_p_mul_res s_mul(p);
 
             for (int i = 0; i < (int)s.size(); i++) {

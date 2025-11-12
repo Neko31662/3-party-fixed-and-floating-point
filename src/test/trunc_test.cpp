@@ -38,9 +38,9 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int test_i = 0; test_i < test_nums; test_i++) {
-        MSSshare<ell> x_share;
-        MSSshare_add_res<ell> z_share;
-        PI_trunc_intermediate<ell> intermediate;
+        MSSshare x_share(ell);
+        MSSshare z_share(ell);
+        PI_trunc_intermediate intermediate(ell);
         int bits;
         bits = test_i % (ell + 5) + 1;
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         ShareValue test_value;
         if (party_id == 0) {
             private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
-            test_value &= MSSshare<ell>::MASK;
+            test_value &= x_share.MASK;
         }
         MSSshare_share_from(0, party_id, *netio, &x_share, test_value);
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
         // reveal
         ShareValue x_recon = MSSshare_recon(party_id, *netio, &x_share);
         ShareValue z_recon = MSSshare_recon(party_id, *netio, &z_share);
-        ShareValue z_plain = ((bits < ell) ? (test_value >> bits) : 0) & MSSshare<ell>::MASK;
+        ShareValue z_plain = ((bits < ell) ? (test_value >> bits) : 0) & x_share.MASK;
         ShareValue dif = z_plain > z_recon ? z_plain - z_recon : z_recon - z_plain;
         if (dif > 1 && party_id == 0) {
             // 排除特殊情况：00000000 和 11111111

@@ -9,13 +9,16 @@
 // 协议所用的特殊加法分享的长度
 #define EXPANDED_ELL(ell) (ell + (1 << LOG_1(ell)))
 
-template <int ell> struct PI_shift_intermediate {
+struct PI_shift_intermediate {
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
-    ADDshare_mul_res<ell> gamma1, gamma2, gamma3;
-    ADDshare_mul_res<EXPANDED_ELL(ell), LongShareValue> d_prime;
-    MSSshare<ell> two_pow_k;
+    ADDshare_mul_res<> gamma1, gamma2, gamma3;
+    ADDshare_mul_res<LongShareValue> d_prime;
+    MSSshare two_pow_k;
+
+    PI_shift_intermediate(int ell)
+        : gamma1(ell), gamma2(ell), gamma3(ell), d_prime(EXPANDED_ELL(ell)), two_pow_k(ell) {}
 };
 
 /* 预处理PI_shift_intermediate对象和协议的输出
@@ -29,13 +32,12 @@ template <int ell> struct PI_shift_intermediate {
  * @param input_x: 作为协议输入的MSSshare对象指针，需要已经预处理完成
  * @param output_res: 协议输出的对象的指针
  */
-template <int ell>
 void PI_shift_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_shift_intermediate<ell> &intermediate, MSSshare<ell> *input_x,
-                         MSSshare_mul_res<ell> *output_res);
+                         PI_shift_intermediate &intermediate, MSSshare *input_x,
+                         MSSshare_mul_res *output_res);
 
-template <int ell>
 void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_shift_intermediate<ell> &intermediate, MSSshare<ell> *input_x,
-              ADDshare<LOG_1(ell)> *input_k, MSSshare_mul_res<ell> *output_res);
+              PI_shift_intermediate &intermediate, MSSshare *input_x, ADDshare<> *input_k,
+              MSSshare_mul_res *output_res);
+              
 #include "protocol/shift.tpp"

@@ -39,11 +39,11 @@ int main(int argc, char **argv) {
 
     // 非向量部分，mod 2^ell
     {
-        vector<ADDshare<ell>> s(len);
+        vector<ADDshare<>> s(len, ADDshare<>(ell));
         for (int i = 0; i < len; i++) {
             ADDshare_share_from(i % 3, party_id, PRGs, *netio, &s[i], secret[i]);
         }
-        vector<ADDshare_mul_res<ell>> s_mul(len);
+        vector<ADDshare_mul_res<>> s_mul(len, ADDshare_mul_res(ell));
         for (int i = 0; i < len; i++) {
             ADDshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[i]);
         }
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
         if (party_id != 0) {
             for (int i = 0; i < len - 1; i++) {
                 ShareValue res = ADDshare_recon(party_id, *netio, &s_mul[i]);
-                ShareValue expect = (secret[i] * secret[i + 1]) & ADDshare<ell>::MASK;
+                ShareValue expect = (secret[i] * secret[i + 1]) & s[0].MASK;
                 if (res != expect) {
                     cout << "Error at index " << i << ": got " << (uint64_t)res << ", expected "
                          << (uint64_t)expect << endl;
@@ -70,11 +70,11 @@ int main(int argc, char **argv) {
 
     // 向量部分，mod 2^ell
     {
-        vector<ADDshare<ell>> s(len);
+        vector<ADDshare<>> s(len, ADDshare<>(ell));
         for (int i = 0; i < len; i++) {
             ADDshare_share_from(i % 3, party_id, PRGs, *netio, &s[i], secret[i]);
         }
-        vector<ADDshare_mul_res<ell>> s_mul(len);
+        vector<ADDshare_mul_res<>> s_mul(len, ADDshare_mul_res(ell));
         for (int i = 0; i < len; i++) {
             ADDshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[i]);
         }
@@ -82,9 +82,9 @@ int main(int argc, char **argv) {
             netio->send_stored_data(2);
         }
 
-        std::vector<ADDshare<ell> *> s1_vec;
-        std::vector<ADDshare<ell> *> s2_vec;
-        std::vector<ADDshare_mul_res<ell> *> res_vec;
+        std::vector<ADDshare<> *> s1_vec;
+        std::vector<ADDshare<> *> s2_vec;
+        std::vector<ADDshare_mul_res<> *> res_vec;
         for (int i = 0; i < len - 1; i++) {
             s1_vec.push_back(&s[i]);
             s2_vec.push_back(&s[i + 1]);
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
         if (party_id != 0) {
             for (int i = 0; i < len - 1; i++) {
                 ShareValue res = ADDshare_recon(party_id, *netio, &s_mul[i]);
-                ShareValue expect = (secret[i] * secret[i + 1]) & ADDshare<ell>::MASK;
+                ShareValue expect = (secret[i] * secret[i + 1]) & s[0].MASK;
                 if (res != expect) {
                     cout << "Error at index " << i << ": got " << (uint64_t)res << ", expected "
                          << (uint64_t)expect << endl;

@@ -1,4 +1,4 @@
-template <int ell> ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare<ell> *s) {
+ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare *s) {
     ShareValue total;
     if (party_id == 0) {
         netio.send_data(1, &s->v2, s->BYTELEN);
@@ -16,9 +16,8 @@ template <int ell> ShareValue MSSshare_recon(const int party_id, NetIOMP &netio,
     return total;
 }
 
-template <int ell>
 void MSSshare_preprocess(const int secret_holder_id, const int party_id, std::vector<PRGSync> &PRGs,
-                         NetIOMP &netio, MSSshare<ell> *s) {
+                         NetIOMP &netio, MSSshare *s) {
 #ifdef DEBUG_MODE
     s->has_preprocess = true;
 #endif
@@ -44,9 +43,8 @@ void MSSshare_preprocess(const int secret_holder_id, const int party_id, std::ve
     }
 }
 
-template <int ell>
 void MSSshare_share_from(const int secret_holder_id, const int party_id, NetIOMP &netio,
-                         MSSshare<ell> *s, ShareValue x) {
+                         MSSshare *s, ShareValue x) {
 #ifdef DEBUG_MODE
     if (!s->has_preprocess) {
         error("MSSshare_share_from must be invoked after MSSshare_preprocess");
@@ -85,8 +83,7 @@ void MSSshare_share_from(const int secret_holder_id, const int party_id, NetIOMP
     }
 }
 
-template <int ell>
-void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare<ell> *s, ShareValue x) {
+void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare *s, ShareValue x) {
 #ifdef DEBUG_MODE
     if (!s->has_preprocess) {
         error("MSSshare_share_from must be invoked after MSSshare_preprocess");
@@ -108,7 +105,7 @@ void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSshare<ell>
     }
 }
 
-template <int ell> void MSSshare_add_plain(const int party_id, MSSshare<ell> *s, ShareValue x) {
+void MSSshare_add_plain(const int party_id, MSSshare *s, ShareValue x) {
 #ifdef DEBUG_MODE
     if (!s->has_shared) {
         error("MSSshare_add_plain must be invoked after shared");
@@ -119,17 +116,15 @@ template <int ell> void MSSshare_add_plain(const int party_id, MSSshare<ell> *s,
     }
 }
 
-template <int ell>
-void MSSshare_add_res_preprocess(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
-                                 MSSshare<ell> *s2) {
+void MSSshare_add_res_preprocess(const int party_id, MSSshare *res, MSSshare *s1,
+                                 MSSshare *s2) {
     auto s_vec = make_ptr_vec(*s1, *s2);
     auto coeff_vec = std::vector<int>{1, 1};
     MSSshare_add_res_preprocess_multi(party_id, res, s_vec, coeff_vec);
 }
 
-template <int ell>
-void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare_add_res<ell> *res,
-                                       std::vector<MSSshare<ell> *> &s_vec,
+void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare *res,
+                                       std::vector<MSSshare *> &s_vec,
                                        std::vector<int> &coeff_vec) {
 #ifdef DEBUG_MODE
     if (s_vec.size() != coeff_vec.size()) {
@@ -150,17 +145,15 @@ void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare_add_res<ell>
     }
 }
 
-template <int ell>
-void MSSshare_add_res_calc_add(const int party_id, MSSshare_add_res<ell> *res, MSSshare<ell> *s1,
-                               MSSshare<ell> *s2) {
+void MSSshare_add_res_calc_add(const int party_id, MSSshare *res, MSSshare *s1,
+                               MSSshare *s2) {
     auto s_vec = make_ptr_vec(*s1, *s2);
     auto coeff_vec = std::vector<int>{1, 1};
     MSSshare_add_res_calc_add_multi(party_id, res, s_vec, coeff_vec);
 }
 
-template <int ell>
-void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare_add_res<ell> *res,
-                                     std::vector<MSSshare<ell> *> &s_vec,
+void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare *res,
+                                     std::vector<MSSshare *> &s_vec,
                                      std::vector<int> &coeff_vec) {
 #ifdef DEBUG_MODE
     if (s_vec.size() != coeff_vec.size()) {
@@ -183,10 +176,9 @@ void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare_add_res<ell> *
     }
 }
 
-template <int ell>
 void MSSshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                 MSSshare_mul_res<ell> *res, const MSSshare<ell> *s1,
-                                 const MSSshare<ell> *s2) {
+                                 MSSshare_mul_res *res, const MSSshare *s1,
+                                 const MSSshare *s2) {
 
 #ifdef DEBUG_MODE
     if (!s1->has_preprocess || !s2->has_preprocess) {
@@ -213,9 +205,8 @@ void MSSshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs,
     }
 }
 
-template <int ell>
-void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_res<ell> *res,
-                               const MSSshare<ell> *s1, const MSSshare<ell> *s2) {
+void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_res *res,
+                               const MSSshare *s1, const MSSshare *s2) {
 #ifdef DEBUG_MODE
     if (!res->has_preprocess) {
         error("MSSshare_mul_res_calc_mul must be invoked after "
@@ -247,7 +238,7 @@ void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_
     }
 }
 
-template <int ell> inline void MSSshare_from_p(MSSshare<ell> *to, MSSshare_p *from) {
+inline void MSSshare_from_p(MSSshare *to, MSSshare_p *from) {
 #ifdef DEBUG_MODE
     if (from->p != to->MASK + 1) {
         error("MSSshare_from_p: modulus mismatch");
@@ -259,8 +250,7 @@ template <int ell> inline void MSSshare_from_p(MSSshare<ell> *to, MSSshare_p *fr
     to->v2 = from->v2;
 }
 
-template <int ell>
-inline void MSSshare_mul_res_from_p(MSSshare_mul_res<ell> *to, MSSshare_p_mul_res *from) {
+inline void MSSshare_mul_res_from_p(MSSshare_mul_res *to, MSSshare_p_mul_res *from) {
 #ifdef DEBUG_MODE
     if (from->p != to->MASK + 1) {
         error("MSSshare_mul_res_from_p: modulus mismatch");

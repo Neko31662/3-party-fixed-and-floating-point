@@ -41,15 +41,14 @@ int main(int argc, char **argv) {
     // 非向量测试
     {
         for (int i = 0; i < test_nums; i++) {
-            MSSshare<ell> x_share, y_share;
-            MSSshare_p_add_res b_share{k};
-            PI_great_intermediate<ell, k> intermediate;
+            MSSshare x_share(ell), y_share(ell);
+            MSSshare_p b_share{k};
+            PI_great_intermediate intermediate(ell, k);
 
             // preprocess
             MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
             MSSshare_preprocess(0, party_id, PRGs, *netio, &y_share);
-            PI_great_preprocess<ell, k>(party_id, PRGs, *netio, intermediate, &x_share, &y_share,
-                                        &b_share);
+            PI_great_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &y_share, &b_share);
 
             if (party_id == 0 || party_id == 1) {
                 netio->send_stored_data(2);
@@ -60,14 +59,14 @@ int main(int argc, char **argv) {
             if (party_id == 0) {
                 private_PRG.gen_random_data(&plain_x, sizeof(ShareValue));
                 private_PRG.gen_random_data(&plain_y, sizeof(ShareValue));
-                plain_x &= MSSshare<ell>::MASK;
-                plain_y &= MSSshare<ell>::MASK;
+                plain_x &= x_share.MASK;
+                plain_y &= x_share.MASK;
             }
             MSSshare_share_from(0, party_id, *netio, &x_share, plain_x);
             MSSshare_share_from(0, party_id, *netio, &y_share, plain_y);
 
             // compute
-            PI_great<ell, k>(party_id, PRGs, *netio, intermediate, &x_share, &y_share, &b_share);
+            PI_great(party_id, PRGs, *netio, intermediate, &x_share, &y_share, &b_share);
 
             // recon
             ShareValue rec = MSSshare_p_recon(party_id, *netio, &b_share);

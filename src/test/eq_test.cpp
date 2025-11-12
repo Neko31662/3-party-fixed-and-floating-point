@@ -39,8 +39,8 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int test_i = 0; test_i < test_nums; test_i++) {
-        PI_eq_intermediate<ell, k> intermediate;
-        MSSshare<ell> x_share, y_share;
+        PI_eq_intermediate intermediate(ell, k);
+        MSSshare x_share(ell), y_share(ell);
         MSSshare_p b_share{k};
 
         // preprocess
@@ -57,9 +57,9 @@ int main(int argc, char **argv) {
         ShareValue test_value_y = 0;
         if (party_id == 0) {
             private_PRG.gen_random_data(&test_value_x, sizeof(ShareValue));
-            test_value_x &= MSSshare<ell>::MASK;
+            test_value_x &= x_share.MASK;
             private_PRG.gen_random_data(&test_value_y, sizeof(ShareValue));
-            test_value_y &= MSSshare<ell>::MASK;
+            test_value_y &= x_share.MASK;
             if (test_i % 2 == 0) {
                 test_value_y = test_value_x;
             }
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    cout<<"PI_eq test passed!" << endl;
+    cout << "PI_eq test passed!" << endl;
     delete netio;
     return 0;
 }

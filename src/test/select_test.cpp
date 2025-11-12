@@ -39,10 +39,10 @@ int main(int argc, char **argv) {
     auto private_PRG = PRGSync(&private_seed);
 
     for (int test_i = 0; test_i < test_nums; test_i++) {
-        PI_select_intermediate<ell> intermediate;
-        MSSshare<ell> x_share, y_share;
-        MSSshare_add_res<ell> z_share;
-        MSSshare<1> b_share;
+        PI_select_intermediate intermediate(ell);
+        MSSshare x_share(ell), y_share(ell);
+        MSSshare z_share(ell);
+        MSSshare b_share(1);
 
         // preprocess
         MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
@@ -59,9 +59,9 @@ int main(int argc, char **argv) {
         ShareValue x_plain, y_plain, b_plain;
         if (party_id == 0) {
             private_PRG.gen_random_data(&x_plain, sizeof(ShareValue));
-            x_plain &= MSSshare<ell>::MASK;
+            x_plain &= x_share.MASK;
             private_PRG.gen_random_data(&y_plain, sizeof(ShareValue));
-            y_plain &= MSSshare<ell>::MASK;
+            y_plain &= x_share.MASK;
             private_PRG.gen_random_data(&b_plain, sizeof(ShareValue));
             b_plain &= 1;
         }

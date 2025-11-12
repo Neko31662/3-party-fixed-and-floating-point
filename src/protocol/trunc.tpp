@@ -1,7 +1,7 @@
-template <int ell>
+
 void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_trunc_intermediate<ell> &intermediate, MSSshare<ell> *input_x,
-                         int input_bits, MSSshare_add_res<ell> *output_z) {
+                         PI_trunc_intermediate &intermediate, MSSshare *input_x, int input_bits,
+                         MSSshare *output_z) {
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error(
@@ -20,18 +20,18 @@ void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     intermediate.has_preprocess = true;
 #endif
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    MSSshare &x = *input_x;
     int bits = input_bits;
-    MSSshare_add_res<ell> &z = *output_z;
-    PI_wrap2_intermediate<ell, (ShareValue(1) << ell)> &wrap2_intermediate =
-        intermediate.wrap2_intermediate;
-    MSSshare_p_add_res &wrap2_res = intermediate.wrap2_res;
+    MSSshare &z = *output_z;
+    PI_wrap2_intermediate &wrap2_intermediate = intermediate.wrap2_intermediate;
+    MSSshare_p &wrap2_res = intermediate.wrap2_res;
 
     // Step 1: 预处理wrap2_intermediate和wrap2_res
     PI_wrap2_preprocess(party_id, PRGs, netio, wrap2_intermediate, &x, &wrap2_res);
 
     // Step 2: 预处理xprime
-    MSSshare<ell> xprime = x;
+    MSSshare xprime = x;
 #ifdef DEBUG_MODE
     xprime.has_preprocess = true;
 #endif
@@ -41,9 +41,9 @@ void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     xprime.v2 = (bits < ell) ? (x.v2 >> bits) : 0;
 
     // Step 3: 预处理bprime = wrap2_res * 2^{ell - bits}
-    MSSshare<ell> wrap2_res_mss;
+    MSSshare wrap2_res_mss(ell);
     MSSshare_from_p(&wrap2_res_mss, &wrap2_res);
-    MSSshare<ell> bprime = wrap2_res_mss;
+    MSSshare bprime = wrap2_res_mss;
 #ifdef DEBUG_MODE
     bprime.has_preprocess = true;
 #endif
@@ -63,10 +63,9 @@ void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     MSSshare_add_res_preprocess_multi(party_id, &z, s_vec, coeff_vec);
 }
 
-template <int ell>
 void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_trunc_intermediate<ell> &intermediate, MSSshare<ell> *input_x, int input_bits,
-              MSSshare_add_res<ell> *output_z) {
+              PI_trunc_intermediate &intermediate, MSSshare *input_x, int input_bits,
+              MSSshare *output_z) {
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_trunc: input_x must be shared before calling PI_trunc");
@@ -82,18 +81,18 @@ void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     }
 #endif
 
-    MSSshare<ell> &x = *input_x;
+    int ell = intermediate.ell;
+    MSSshare &x = *input_x;
     int bits = input_bits;
-    MSSshare_add_res<ell> &z = *output_z;
-    PI_wrap2_intermediate<ell, (ShareValue(1) << ell)> &wrap2_intermediate =
-        intermediate.wrap2_intermediate;
-    MSSshare_p_add_res &wrap2_res = intermediate.wrap2_res;
+    MSSshare &z = *output_z;
+    PI_wrap2_intermediate &wrap2_intermediate = intermediate.wrap2_intermediate;
+    MSSshare_p &wrap2_res = intermediate.wrap2_res;
 
     // Step 1: 执行wrap2协议
     PI_wrap2(party_id, PRGs, netio, wrap2_intermediate, &x, &wrap2_res);
 
     // Step 2: 计算xprime
-    MSSshare<ell> xprime = x;
+    MSSshare xprime = x;
 #ifdef DEBUG_MODE
     xprime.has_preprocess = true;
     xprime.has_shared = true;
@@ -104,9 +103,9 @@ void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     xprime.v2 = (bits < ell) ? (x.v2 >> bits) : 0;
 
     // Step 3: 计算bprime = wrap2_res * 2^{ell - bits}
-    MSSshare<ell> wrap2_res_mss;
+    MSSshare wrap2_res_mss(ell);
     MSSshare_from_p(&wrap2_res_mss, &wrap2_res);
-    MSSshare<ell> bprime = wrap2_res_mss;
+    MSSshare bprime = wrap2_res_mss;
 #ifdef DEBUG_MODE
     bprime.has_preprocess = true;
     bprime.has_shared = true;

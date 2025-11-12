@@ -1,6 +1,6 @@
-template <int ell, ShareValue k>
+ 
 void PI_convert_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                           PI_convert_intermediate<k> &intermediate, ADDshare<ell> *input_x,
+                           PI_convert_intermediate &intermediate, ADDshare<> *input_x,
                            MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
@@ -11,8 +11,10 @@ void PI_convert_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIO
     }
     intermediate.has_preprocess = true;
 #endif
+    int ell = input_x->BITLEN;
+    ShareValue k = output_z->p;
 
-    ADDshare<ell> &x = *input_x;
+    ADDshare<> &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p_mul_res &c = intermediate.c;
 
@@ -20,9 +22,9 @@ void PI_convert_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIO
     ADDshare_p_mul_res_preprocess(party_id, PRGs, netio, &c);
 }
 
-template <int ell, ShareValue k>
+ 
 void PI_convert(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                PI_convert_intermediate<k> &intermediate, ADDshare<ell> *input_x,
+                PI_convert_intermediate &intermediate, ADDshare<> *input_x,
                 MSSshare_p *output_z) {
 #ifdef DEBUG_MODE
     if (!intermediate.has_preprocess) {
@@ -39,8 +41,11 @@ void PI_convert(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (party_id == 0) {
         return;
     }
+    
+    int ell = input_x->BITLEN;
+    ShareValue k = output_z->p;
 
-    ADDshare<ell> &x = *input_x;
+    ADDshare<> &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p_mul_res &c = intermediate.c;
 
