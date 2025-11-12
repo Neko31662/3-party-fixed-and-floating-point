@@ -140,7 +140,7 @@ struct encoded_msg {
     }
 
     void from_char_array(const char *in, size_t bytelen) {
-        data.clear();
+        clear();
         int bitlen = bytelen * 8;
         for (size_t i = 0; i < bitlen; i++) {
             size_t byte_pos = i / 8;

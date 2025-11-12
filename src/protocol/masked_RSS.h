@@ -152,6 +152,13 @@ inline void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare *res,
  */
 inline void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_res *res,
                                       const MSSshare *s1, const MSSshare *s2);
+
+/*密文乘法的向量化版本
+*/
+inline void MSSshare_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
+                                          std::vector<MSSshare_mul_res *> &res_vec,
+                                          std::vector<MSSshare *> &s1_vec, std::vector<MSSshare *> &s2_vec);
+
 inline void MSSshare_from_p(MSSshare *to, MSSshare_p *from);
 
 inline void MSSshare_mul_res_from_p(MSSshare_mul_res *to, MSSshare_p_mul_res *from);

@@ -27,11 +27,16 @@ struct PI_great_intermediate {
 };
 
 void PI_great_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                         PI_great_intermediate &intermediate, MSSshare *input_x,
-                         MSSshare *input_y, MSSshare_p *output_b);
+                         PI_great_intermediate &intermediate, MSSshare *input_x, MSSshare *input_y,
+                         MSSshare_p *output_b);
 
 void PI_great(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-              PI_great_intermediate &intermediate, MSSshare *input_x,
-              MSSshare *input_y, MSSshare_p *output_b);
+              PI_great_intermediate &intermediate, MSSshare *input_x, MSSshare *input_y,
+              MSSshare_p *output_b);
+
+void PI_great_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                  std::vector<PI_great_intermediate *> &intermediate_vec,
+                  std::vector<MSSshare *> &input_x_vec, std::vector<MSSshare *> &input_y_vec,
+                  std::vector<MSSshare_p *> &output_b_vec);
 
 #include "protocol/great.tpp"

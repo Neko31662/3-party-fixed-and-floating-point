@@ -243,23 +243,108 @@ void MSSshare_p_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_p_
     }
     res->has_shared = true;
 #endif
-    if (party_id == 1 || party_id == 2) {
+    if (party_id == 0) {
+        return;
+    }
+
+    ShareValue temp = 0;
+    ShareValue recv_temp = 0;
+    temp = (temp + (s1->v1 * s2->v2) % res->p) % res->p;
+    temp = (temp + (s1->v2 * s2->v1) % res->p) % res->p;
+    temp = (temp + res->v3) % res->p;
+    temp = (temp - res->v2 + res->p) % res->p;
+
+    if (party_id == 1) {
+        temp = (temp + (s1->v1 * s2->v1) % res->p) % res->p;
+        netio.send_data(2, &temp, res->BYTELEN);
+
+        netio.recv_data(2, &recv_temp, res->BYTELEN);
+    } else if (party_id == 2) {
+        netio.recv_data(1, &recv_temp, res->BYTELEN);
+        netio.send_data(1, &temp, res->BYTELEN);
+    }
+    res->v1 = (recv_temp + temp) % res->p;
+}
+
+inline void MSSshare_p_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
+                                            std::vector<MSSshare_p_mul_res *> &res_vec,
+                                            std::vector<MSSshare_p *> &s1_vec,
+                                            std::vector<MSSshare_p *> &s2_vec) {
+#ifdef DEBUG_MODE
+    if (res_vec.size() != s1_vec.size() || res_vec.size() != s2_vec.size()) {
+        error("MSSshare_p_mul_res_calc_mul_vec: input vector size mismatch");
+    }
+    for (size_t i = 0; i < res_vec.size(); i++) {
+        MSSshare_p_mul_res *res = res_vec[i];
+        MSSshare_p *s1 = s1_vec[i];
+        MSSshare_p *s2 = s2_vec[i];
+        if (!res->has_preprocess) {
+            error("MSSshare_p_mul_res_calc_mul must be invoked after "
+                  "MSSshare_p_mul_res_preprocess");
+        }
+        if (!s1->has_shared || !s2->has_shared) {
+            error("MSSshare_p_mul_res_calc_mul requires s1 and s2 to have been shared");
+        }
+        if (res->p != s1->p || res->p != s2->p) {
+            error("MSSshare_p_add_res_preprocess: modulus p mismatch");
+        }
+        res->has_shared = true;
+    }
+#endif
+    if (party_id == 0) {
+        return;
+    }
+
+    int vec_len = res_vec.size();
+    int total_bitp = 0;
+    for (size_t i = 0; i < vec_len; i++) {
+        MSSshare_p_mul_res *res = res_vec[i];
+        MSSshare_p *s1 = s1_vec[i];
+        MSSshare_p *s2 = s2_vec[i];
+        total_bitp += res->BITLEN;
+    }
+    int total_bytep = (total_bitp + 7) / 8;
+    encoded_msg msg, msg_recv;
+
+    for (int i = 0; i < vec_len; i++) {
+        auto &res = res_vec[i];
+        auto &s1 = s1_vec[i];
+        auto &s2 = s2_vec[i];
+
         ShareValue temp = 0;
-        ShareValue recv_temp = 0;
         temp = (temp + (s1->v1 * s2->v2) % res->p) % res->p;
         temp = (temp + (s1->v2 * s2->v1) % res->p) % res->p;
         temp = (temp + res->v3) % res->p;
         temp = (temp - res->v2 + res->p) % res->p;
 
         if (party_id == 1) {
-            temp = (temp + (s1->v1 * s2->v1) % res->p) % res->p;
-            netio.send_data(2, &temp, res->BYTELEN);
-
-            netio.recv_data(2, &recv_temp, res->BYTELEN);
-        } else if (party_id == 2) {
-            netio.recv_data(1, &recv_temp, res->BYTELEN);
-            netio.send_data(1, &temp, res->BYTELEN);
+            temp += s1->v1 * s2->v1;
+            temp %= res->p;
         }
-        res->v1 = (recv_temp + temp) % res->p;
+        msg.add_msg((char *)&temp, res->BITLEN);
+        res->v1 = temp % res->p;
+    }
+
+    if (party_id == 1) {
+        std::vector<char> tmp(total_bytep);
+        msg.to_char_array(tmp.data());
+        netio.send_data(2, tmp.data(), total_bytep);
+
+        netio.recv_data(2, tmp.data(), total_bytep);
+        msg_recv.from_char_array(tmp.data(), total_bytep);
+    } else if (party_id == 2) {
+        std::vector<char> tmp(total_bytep);
+        netio.recv_data(1, tmp.data(), total_bytep);
+        msg_recv.from_char_array(tmp.data(), total_bytep);
+
+        msg.to_char_array(tmp.data());
+        netio.send_data(1, tmp.data(), total_bytep);
+    }
+
+    for (int i = 0; i < vec_len; i++) {
+        auto &res = res_vec[i];
+        ShareValue recv_temp = 0;
+        msg_recv.read_msg((char *)&recv_temp, res->BITLEN);
+        res->v1 = (recv_temp + res->v1) % res->p;
     }
 }
