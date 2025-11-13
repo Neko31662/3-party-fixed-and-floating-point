@@ -1,6 +1,8 @@
 void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                               PI_wrap1_spec_intermediate &intermediate, MSSshare *input_x,
                               MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap1_spec_preprocess has already been called on this object");
@@ -15,12 +17,13 @@ void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     if (output_z->p != intermediate.k) {
         error("PI_wrap1_spec_preprocess: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap1_spec_preprocess: input_x bitlen mismatch");
+    }
     intermediate.has_preprocess = true;
     intermediate.rx0.has_shared = true;
 #endif
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &rx0 = intermediate.rx0;
@@ -36,6 +39,8 @@ void PI_wrap1_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
 void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                               PI_wrap2_spec_intermediate &intermediate, MSSshare *input_x,
                               MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap2_spec_preprocess has already been called on this object");
@@ -50,12 +55,13 @@ void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     if (output_z->p != intermediate.k) {
         error("PI_wrap2_spec_preprocess: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap2_spec_preprocess: input_x bitlen mismatch");
+    }
     intermediate.has_preprocess = true;
     intermediate.b.has_shared = true;
 #endif
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &b = intermediate.b;
@@ -76,6 +82,8 @@ void PI_wrap2_spec_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
 void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                    PI_wrap1_spec_intermediate &intermediate, MSSshare *input_x,
                    MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_wrap1_spec: input_x must be shared before calling PI_wrap1_spec");
@@ -89,6 +97,9 @@ void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (output_z->p != intermediate.k) {
         error("PI_wrap1_spec: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap1_spec: input_x bitlen mismatch");
+    }
     output_z->has_shared = true;
 #endif
 
@@ -96,8 +107,6 @@ void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         return;
     }
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &rx0 = intermediate.rx0;
@@ -125,6 +134,8 @@ void PI_wrap1_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
 void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                    PI_wrap2_spec_intermediate &intermediate, MSSshare *input_x,
                    MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_wrap2_spec: input_x must be shared before calling PI_wrap2_spec");
@@ -138,6 +149,9 @@ void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     if (output_z->p != intermediate.k) {
         error("PI_wrap2_spec: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap2_spec: input_x bitlen mismatch");
+    }
     output_z->has_shared = true;
 #endif
 
@@ -145,8 +159,6 @@ void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         return;
     }
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     ADDshare_p &rx0 = intermediate.wrap1_intermediate.rx0;
@@ -176,6 +188,8 @@ void PI_wrap2_spec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
 void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                          PI_wrap1_intermediate &intermediate, MSSshare *input_x,
                          MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap1_preprocess has already been called on this object");
@@ -190,12 +204,13 @@ void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     if (output_z->p != intermediate.k) {
         error("PI_wrap1_preprocess: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap1_preprocess: input_x bitlen mismatch");
+    }
     intermediate.has_preprocess = true;
     intermediate.tmpx.has_preprocess = true;
 #endif
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare &tmpx = intermediate.tmpx;
     MSSshare_p &z = *output_z;
@@ -229,6 +244,8 @@ void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
 void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                          PI_wrap2_intermediate &intermediate, MSSshare *input_x,
                          MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (intermediate.has_preprocess) {
         error("PI_wrap2_preprocess has already been called on this object");
@@ -243,11 +260,12 @@ void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     if (output_z->p != intermediate.k) {
         error("PI_wrap2_preprocess: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap2_preprocess: input_x bitlen mismatch");
+    }
     intermediate.has_preprocess = true;
 #endif
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     PI_wrap1_intermediate &wrap1_intermediate = intermediate.wrap1_intermediate;
@@ -259,6 +277,8 @@ void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
 
 void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_wrap1_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_wrap1: input_x must be shared before calling PI_wrap1");
@@ -272,11 +292,12 @@ void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (output_z->p != intermediate.k) {
         error("PI_wrap1: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap1: input_x bitlen mismatch");
+    }
     intermediate.tmpx.has_shared = true;
 #endif
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare &tmpx = intermediate.tmpx;
     MSSshare_p &z = *output_z;
@@ -297,6 +318,8 @@ void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
 void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_wrap2_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_wrap2: input_x must be shared before calling PI_wrap2");
@@ -310,10 +333,11 @@ void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (output_z->p != intermediate.k) {
         error("PI_wrap2: output_z modulus mismatch");
     }
+    if (input_x->BITLEN != ell) {
+        error("PI_wrap2: input_x bitlen mismatch");
+    }
 #endif
 
-    int ell = intermediate.ell;
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &z = *output_z;
     PI_wrap1_intermediate &wrap1_intermediate = intermediate.wrap1_intermediate;

@@ -2,6 +2,8 @@
 void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                       PRGSync private_PRG, PI_eq_intermediate &intermediate, MSSshare *input_x,
                       MSSshare *input_y, MSSshare_p *output_b) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error("PI_eq_preprocess: input_x must be preprocessed before calling PI_eq_preprocess");
@@ -15,13 +17,15 @@ void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &n
     if (output_b->has_preprocess) {
         error("PI_eq_preprocess: output_b has already been preprocessed");
     }
-    if (output_b->p != intermediate.k) {
+    if (output_b->p != k) {
         error("PI_eq_preprocess: output_b modulus mismatch");
+    }
+    if (input_x->BITLEN != ell || input_y->BITLEN != ell) {
+        error("PI_eq_preprocess: input_x or input_y BITLEN mismatch");
     }
     intermediate.has_preprocess = true;
 #endif
 
-    int ell = input_x->BITLEN;
     MSSshare &x = *input_x;
     MSSshare &y = *input_y;
     MSSshare_p &b = *output_b;
@@ -61,6 +65,8 @@ void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &n
 void PI_eq(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
            PI_eq_intermediate &intermediate, MSSshare *input_x, MSSshare *input_y,
            MSSshare_p *output_b) {
+    int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_eq: input_x must be shared before calling PI_eq");
@@ -74,13 +80,15 @@ void PI_eq(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (!output_b->has_preprocess) {
         error("PI_eq: output_b must be preprocessed before calling PI_eq");
     }
-    if (output_b->p != intermediate.k) {
+    if (output_b->p != k) {
         error("PI_eq: output_b modulus mismatch");
+    }
+    if (input_x->BITLEN != ell || input_y->BITLEN != ell) {
+        error("PI_eq: input_x or input_y BITLEN mismatch");
     }
     output_b->has_shared = true;
 #endif
 
-    int ell = input_x->BITLEN;
     MSSshare &x = *input_x;
     MSSshare &y = *input_y;
     MSSshare_p &b = *output_b;

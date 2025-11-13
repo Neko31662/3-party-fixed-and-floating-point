@@ -10,6 +10,7 @@
 #define EXPANDED_ELL(ell) (ell + (1 << LOG_1(ell)))
 
 struct PI_shift_intermediate {
+    int ell;
 #ifdef DEBUG_MODE
     bool has_preprocess = false;
 #endif
@@ -18,7 +19,9 @@ struct PI_shift_intermediate {
     MSSshare two_pow_k;
 
     PI_shift_intermediate(int ell)
-        : gamma1(ell), gamma2(ell), gamma3(ell), d_prime(EXPANDED_ELL(ell)), two_pow_k(ell) {}
+        : gamma1(ell), gamma2(ell), gamma3(ell), d_prime(EXPANDED_ELL(ell)), two_pow_k(ell) {
+        this->ell = ell;
+    }
 };
 
 /* 预处理PI_shift_intermediate对象和协议的输出
@@ -39,5 +42,5 @@ void PI_shift_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
 void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_shift_intermediate &intermediate, MSSshare *input_x, ADDshare<> *input_k,
               MSSshare_mul_res *output_res);
-              
+
 #include "protocol/shift.tpp"

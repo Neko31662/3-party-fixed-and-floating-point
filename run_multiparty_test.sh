@@ -93,7 +93,7 @@ if $ALL_SUCCESS; then
     echo "========================================"
     
     # 清理日志和PID文件
-    rm -f party*.log party*.pid
+    # rm -f party*.log party*.pid
     
     exit 0
 else

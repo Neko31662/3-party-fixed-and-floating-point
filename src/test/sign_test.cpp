@@ -37,6 +37,15 @@ int main(int argc, char **argv) {
     vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
     auto private_seed = gen_seed();
     auto private_PRG = PRGSync(&private_seed);
+    block public_seed;
+    if (party_id == 0) {
+        public_seed = gen_seed();
+        netio->send_data(1, &public_seed, sizeof(block));
+        netio->send_data(2, &public_seed, sizeof(block));
+    } else {
+        netio->recv_data(0, &public_seed, sizeof(block));
+    }
+    PRGSync public_PRG(&public_seed);
 
     // 非向量测试
     {

@@ -2,6 +2,7 @@
 void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                          PI_trunc_intermediate &intermediate, MSSshare *input_x, int input_bits,
                          MSSshare *output_z) {
+    int ell = intermediate.ell;
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error(
@@ -16,11 +17,13 @@ void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     if (input_bits <= 0) {
         error("PI_trunc_preprocess: input_bits must be positive");
     }
+    if (input_x->BITLEN != ell || output_z->BITLEN != ell) {
+        error("PI_trunc_preprocess: input_x or output_z BITLEN mismatch");
+    }
     intermediate.input_bits = input_bits;
     intermediate.has_preprocess = true;
 #endif
 
-    int ell = intermediate.ell;
     MSSshare &x = *input_x;
     int bits = input_bits;
     MSSshare &z = *output_z;
@@ -66,6 +69,7 @@ void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
 void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_trunc_intermediate &intermediate, MSSshare *input_x, int input_bits,
               MSSshare *output_z) {
+    int ell = intermediate.ell;
 #ifdef DEBUG_MODE
     if (!input_x->has_shared) {
         error("PI_trunc: input_x must be shared before calling PI_trunc");
@@ -79,9 +83,11 @@ void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     if (input_bits != intermediate.input_bits) {
         error("PI_trunc: input_bits mismatch");
     }
+    if (input_x->BITLEN != ell || output_z->BITLEN != ell) {
+        error("PI_trunc: input_x or output_z BITLEN mismatch");
+    }
 #endif
 
-    int ell = intermediate.ell;
     MSSshare &x = *input_x;
     int bits = input_bits;
     MSSshare &z = *output_z;

@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
         FLTplain y_recon = FLTshare_recon(party_id, *netio, &y_share);
         FLTplain z_recon = FLTshare_recon(party_id, *netio, &z_share);
         if (party_id == 0) {
-            ShareValue z_t_plain = (LongShareValue)x_t * y_t;
+            ShareValue z_t_plain = x_t * y_t;
             bool z_wrap = (z_t_plain & (ShareValue(1) << (lf - 1))) ? 1 : 0;
             z_t_plain >>= lf;
             z_t_plain += z_wrap;

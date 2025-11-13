@@ -106,6 +106,21 @@ add_test_target(trunc_test)
 # floating_point_mult协议测试
 add_test_target(floating_point_mult_test)
 
+# floating_point_add协议测试
+add_test_target(floating_point_add_test)
+
+# 定点乘法速度测试
+add_test_target(speed_fixed_mult_test)
+
+# 定点乘法SOTA速度测试
+add_test_target(speed_SOTA_test)
+
+# 浮点乘法速度测试
+add_test_target(speed_floating_mult_test)
+
+# 浮点加法速度测试
+add_test_target(speed_floating_add_test)
+
 # 如果有其他测试文件，可以按相同模式添加
 # add_executable(otherTest
 #     ${COMMON_SOURCES}

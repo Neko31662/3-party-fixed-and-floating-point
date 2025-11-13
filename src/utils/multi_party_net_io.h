@@ -27,7 +27,8 @@ class NetIOMP {
                     if (i == party) {
 #ifdef LOCALHOST
                         usleep(1000);
-                        ios1[j] = std::make_shared<emp::NetIO>(IP[j], port + 2 * (i * nParty + j), true);
+                        ios1[j] =
+                            std::make_shared<emp::NetIO>(IP[j], port + 2 * (i * nParty + j), true);
 #else
                         usleep(1000);
                         ios1[j] = std::make_shared<emp::NetIO>(IP[j], port + 2 * (i), true);
@@ -36,8 +37,8 @@ class NetIOMP {
 
 #ifdef LOCALHOST
                         usleep(1000);
-                        ios2[j] =
-                            std::make_shared<emp::NetIO>(nullptr, port + 2 * (i * nParty + j) + 1, true);
+                        ios2[j] = std::make_shared<emp::NetIO>(
+                            nullptr, port + 2 * (i * nParty + j) + 1, true);
 #else
                         usleep(1000);
                         ios2[j] = std::make_shared<emp::NetIO>(nullptr, port + 2 * (j) + 1, true);
@@ -46,8 +47,8 @@ class NetIOMP {
                     } else if (j == party) {
 #ifdef LOCALHOST
                         usleep(1000);
-                        ios1[i] =
-                            std::make_shared<emp::NetIO>(nullptr, port + 2 * (i * nParty + j), true);
+                        ios1[i] = std::make_shared<emp::NetIO>(nullptr, port + 2 * (i * nParty + j),
+                                                               true);
 #else
                         usleep(1000);
                         ios1[i] = std::make_shared<emp::NetIO>(nullptr, port + 2 * (i), true);
@@ -56,8 +57,8 @@ class NetIOMP {
 
 #ifdef LOCALHOST
                         usleep(1000);
-                        ios2[i] =
-                            std::make_shared<emp::NetIO>(IP[i], port + 2 * (i * nParty + j) + 1, true);
+                        ios2[i] = std::make_shared<emp::NetIO>(
+                            IP[i], port + 2 * (i * nParty + j) + 1, true);
 #else
                         usleep(1000);
                         ios2[i] = std::make_shared<emp::NetIO>(IP[i], port + 2 * (j) + 1, true);
@@ -89,20 +90,20 @@ class NetIOMP {
         flush(dst);
 #endif
     }
-    void store_data(int dst, const void *data, size_t len){
+    void store_data(int dst, const void *data, size_t len) {
         if (dst != party) {
             stored_data[dst].append((char *)data, len);
         }
     }
-    void send_stored_data(int dst){
+    void send_stored_data(int dst) {
         if (dst != party) {
-            if (stored_data[dst].size() > 0){
+            if (stored_data[dst].size() > 0) {
                 send_data(dst, stored_data[dst].data(), stored_data[dst].size());
                 stored_data[dst].clear();
             }
         }
     }
-    void send_stored_data_all(){
+    void send_stored_data_all() {
         for (int i = 0; i < nParty; ++i)
             if (i != party) {
                 send_stored_data(i);
@@ -151,3 +152,15 @@ class NetIOMP {
                 }
     }
 };
+
+inline std::vector<uint64_t> get_netio_bytes(int party_id, NetIOMP &netio, int PARTY_NUM = 3) {
+    std::vector<uint64_t> res;
+    for (int i = 0; i < PARTY_NUM; ++i) {
+        if (i != party_id) {
+            res.push_back(netio.ios1[i]->counter + netio.ios2[i]->counter);
+        } else {
+            res.push_back(0);
+        }
+    }
+    return res;
+}

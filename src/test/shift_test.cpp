@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     }
     vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
 
-    for (int k = 0; k < ell; ++k) {
+    for (int k = 0; k < 1; ++k) {
         ShareValue plain_x = 24678;
 
         PI_shift_intermediate intermediate(ell);

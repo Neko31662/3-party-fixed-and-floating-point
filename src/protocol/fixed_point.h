@@ -51,4 +51,9 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
                    PI_fixed_mult_intermediate &PI_fixed_mult_intermediate, MSSshare *input_x,
                    MSSshare *input_y, MSSshare *output_z, bool has_offset = true);
 
+void PI_fixed_mult_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                       std::vector<PI_fixed_mult_intermediate *> &PI_fixed_mult_intermediate_vec,
+                       std::vector<MSSshare *> &input_x_vec, std::vector<MSSshare *> &input_y_vec,
+                       std::vector<MSSshare *> &output_z_vec, bool has_offset = true);
+
 #include "protocol/fixed_point.tpp"

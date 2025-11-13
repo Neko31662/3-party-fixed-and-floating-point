@@ -1,6 +1,8 @@
 inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                                 PI_align_intermediate &intermediate, MSSshare *input_x,
                                 MSSshare *output_z, MSSshare_mul_res *output_zeta) {
+    int ell = intermediate.ell;
+    int ell2 = intermediate.ell2;
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error(
@@ -15,11 +17,14 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     if (output_zeta->has_preprocess) {
         error("PI_align_preprocess: output_zeta has already been preprocessed");
     }
+    if (input_x->BITLEN != ell || output_z->BITLEN != ell) {
+        error("PI_align_preprocess: input_x or output_z BITLEN mismatch");
+    }
+    if (output_zeta->BITLEN != ell2) {
+        error("PI_align_preprocess: output_zeta BITLEN mismatch");
+    }
     intermediate.has_preprocess = true;
 #endif
-
-    int ell = intermediate.ell;
-    int ell2 = intermediate.ell2;
     MSSshare &x = *input_x;
     MSSshare &z = *output_z;
     MSSshare_mul_res &zeta = *output_zeta;
@@ -130,6 +135,8 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
 inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                      PI_align_intermediate &intermediate, MSSshare *input_x, MSSshare *output_z,
                      MSSshare_mul_res *output_zeta) {
+    int ell = intermediate.ell;
+    int ell2 = intermediate.ell2;
 #ifdef DEBUG_MODE
     if (!intermediate.has_preprocess) {
         error("PI_align: PI_align_preprocess must be called before PI_align");
@@ -143,10 +150,14 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     if (!output_zeta->has_preprocess) {
         error("PI_align: output_zeta must be preprocessed before calling PI_align");
     }
+    if (input_x->BITLEN != ell || output_z->BITLEN != ell) {
+        error("PI_align_preprocess: input_x or output_z BITLEN mismatch");
+    }
+    if (output_zeta->BITLEN != ell2) {
+        error("PI_align_preprocess: output_zeta BITLEN mismatch");
+    }
 #endif
 
-    int ell = intermediate.ell;
-    int ell2 = intermediate.ell2;
     MSSshare &x = *input_x;
     MSSshare &z = *output_z;
     MSSshare_mul_res &zeta = *output_zeta;

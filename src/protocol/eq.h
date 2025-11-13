@@ -6,6 +6,7 @@
 #include "utils/misc.h"
 
 struct PI_eq_intermediate {
+    int ell;
     ShareValue k;
     ShareValue p;
     std::vector<ADDshare_p> t_list, rd_list;
@@ -16,6 +17,7 @@ struct PI_eq_intermediate {
 #endif
 
     PI_eq_intermediate(int ell, ShareValue k) : p(nxt_prime(ell)), sigma(p) {
+        this->ell = ell;
         this->k = k;
         t_list = std::vector<ADDshare_p>(p, ADDshare_p{k});
         rd_list = std::vector<ADDshare_p>(ell, ADDshare_p{p});
