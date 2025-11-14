@@ -50,10 +50,10 @@ int main(int argc, char **argv) {
             for (int i = 0; i < (int)s.size(); i++) {
                 MSSshare_preprocess(i % 3, party_id, PRGs, *netio, &s[i]);
             }
-            auto s_vec = make_ptr_vec(s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
-            auto coeff_vec = std::vector<int>{coeff[0], coeff[1], coeff[2], coeff[3],
-                                              coeff[4], coeff[5], coeff[6]};
-            MSSshare_add_res_preprocess_multi(party_id, &s_add, s_vec, coeff_vec);
+            s_add = s[0] * coeff[0];
+            for (int i = 1; i < 7; i++) {
+                s_add = s_add + (s[i] * coeff[i]);
+            }
             MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul, &s_add, &s_add);
 
             // preprocess后需要调用这个
@@ -70,7 +70,10 @@ int main(int argc, char **argv) {
             }
 
             // calculate
-            MSSshare_add_res_calc_add_multi(party_id, &s_add, s_vec, coeff_vec);
+            s_add = s[0] * coeff[0];
+            for (int i = 1; i < 7; i++) {
+                s_add = s_add + (s[i] * coeff[i]);
+            }
             MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul, &s_add, &s_add);
 
             // reconstruct
@@ -102,10 +105,10 @@ int main(int argc, char **argv) {
             for (int i = 0; i < (int)s.size(); i++) {
                 MSSshare_p_preprocess(i % 3, party_id, PRGs, *netio, &s[i]);
             }
-            auto s_vec = make_ptr_vec(s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
-            auto coeff_vec = std::vector<int>{coeff[0], coeff[1], coeff[2], coeff[3],
-                                              coeff[4], coeff[5], coeff[6]};
-            MSSshare_p_add_res_preprocess_multi(party_id, &s_add, s_vec, coeff_vec);
+            s_add = s[0] * coeff[0];
+            for (int i = 1; i < 7; i++) {
+                s_add = s_add + (s[i] * coeff[i]);
+            }
             MSSshare_p_mul_res_preprocess(party_id, PRGs, *netio, &s_mul, &s_add, &s_add);
 
             // preprocess后需要调用这个
@@ -122,7 +125,10 @@ int main(int argc, char **argv) {
             }
 
             // calculate
-            MSSshare_p_add_res_calc_add_multi(party_id, &s_add, s_vec, coeff_vec);
+            s_add = s[0] * coeff[0];
+            for (int i = 1; i < 7; i++) {
+                s_add = s_add + (s[i] * coeff[i]);
+            }
             MSSshare_p_mul_res_calc_mul(party_id, *netio, &s_mul, &s_add, &s_add);
 
             // reconstruct

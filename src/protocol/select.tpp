@@ -54,23 +54,14 @@ void PI_select_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOM
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &mb_mul_rb, &mb, &rb);
 
     // Step 4: 生成bprime = mb + rb -2*mb*rb, dif = x - y
-    MSSshare bprime(ell);
-    auto s1_vec = make_ptr_vec(mb, rb, mb_mul_rb);
-    auto coeff1_vec = std::vector<int>{1, 1, -2};
-    MSSshare_add_res_preprocess_multi(party_id, &bprime, s1_vec, coeff1_vec);
-
-    MSSshare dif(ell);
-    auto s2_vec = make_ptr_vec(x, y);
-    auto coeff2_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &dif, s2_vec, coeff2_vec);
+    MSSshare bprime = mb + rb - (mb_mul_rb * 2);
+    MSSshare dif = x - y;
 
     // Step 5: 预处理 bprime * dif
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &bprime_mul_dif, &bprime, &dif);
 
     // Step 6: 预处理最终结果 z = bprime * dif + y
-    auto s3_vec = make_ptr_vec<MSSshare>(bprime_mul_dif, y);
-    auto coeff3_vec = std::vector<int>{1, 1};
-    MSSshare_add_res_preprocess_multi(party_id, &z, s3_vec, coeff3_vec);
+    z = bprime_mul_dif + y;
 }
 
 void PI_select(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -123,25 +114,14 @@ void PI_select(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     MSSshare_mul_res_calc_mul(party_id, netio, &mb_mul_rb, &mb, &rb);
 
     // Step 3: 计算 bprime = mb + rb -2*mb*rb, dif = x - y
-    MSSshare bprime(ell);
-    auto s1_vec = make_ptr_vec(mb, rb, mb_mul_rb);
-    auto coeff1_vec = std::vector<int>{1, 1, -2};
-    MSSshare_add_res_preprocess_multi(party_id, &bprime, s1_vec, coeff1_vec);
-    MSSshare_add_res_calc_add_multi(party_id, &bprime, s1_vec, coeff1_vec);
-
-    MSSshare dif(ell);
-    auto s2_vec = make_ptr_vec(x, y);
-    auto coeff2_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &dif, s2_vec, coeff2_vec);
-    MSSshare_add_res_calc_add_multi(party_id, &dif, s2_vec, coeff2_vec);
+    MSSshare bprime = mb + rb - (mb_mul_rb * 2);
+    MSSshare dif = x - y;
 
     // Step 4: 计算 bprime * dif
     MSSshare_mul_res_calc_mul(party_id, netio, &bprime_mul_dif, &bprime, &dif);
 
     // Step 5: 计算最终结果 z = bprime * dif + y
-    auto s3_vec = make_ptr_vec<MSSshare>(bprime_mul_dif, y);
-    auto coeff3_vec = std::vector<int>{1, 1};
-    MSSshare_add_res_calc_add_multi(party_id, &z, s3_vec, coeff3_vec);
+    z = bprime_mul_dif + y;
 }
 
 void PI_select_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -240,17 +220,8 @@ void PI_select_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         MSSshare_mul_res &mb_mul_rb = intermediate_vec[i]->mb_mul_rb;
         MSSshare_mul_res &bprime_mul_dif = intermediate_vec[i]->bprime_mul_dif;
 
-        MSSshare bprime(ell);
-        auto s1_vec = make_ptr_vec(mb_vec[i], rb, mb_mul_rb);
-        auto coeff1_vec = std::vector<int>{1, 1, -2};
-        MSSshare_add_res_preprocess_multi(party_id, &bprime, s1_vec, coeff1_vec);
-        MSSshare_add_res_calc_add_multi(party_id, &bprime, s1_vec, coeff1_vec);
-
-        MSSshare dif(ell);
-        auto s2_vec = make_ptr_vec(x, y);
-        auto coeff2_vec = std::vector<int>{1, -1};
-        MSSshare_add_res_preprocess_multi(party_id, &dif, s2_vec, coeff2_vec);
-        MSSshare_add_res_calc_add_multi(party_id, &dif, s2_vec, coeff2_vec);
+        MSSshare bprime = mb_vec[i] + rb - (mb_mul_rb * 2);
+        MSSshare dif = x - y;
 
         bprime_vec.push_back(bprime);
         dif_vec.push_back(dif);
@@ -279,8 +250,6 @@ void PI_select_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
         MSSshare_mul_res &mb_mul_rb = intermediate_vec[i]->mb_mul_rb;
         MSSshare_mul_res &bprime_mul_dif = intermediate_vec[i]->bprime_mul_dif;
 
-        auto s3_vec = make_ptr_vec<MSSshare>(bprime_mul_dif, y);
-        auto coeff3_vec = std::vector<int>{1, 1};
-        MSSshare_add_res_calc_add_multi(party_id, &z, s3_vec, coeff3_vec);
+        z = bprime_mul_dif + y;
     }
 }

@@ -67,12 +67,12 @@ int main(int argc, char **argv) {
         // ======================================================================
         //        i: 0,   1,   2
         // s_mul[i]: c*d, e*f, (a+b) * (c*d)
-        MSSshare_add_res_preprocess(party_id, &s_add[0], &s[0], &s[1]);
+        s_add[0] = s[0] + s[1];
         MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[0], &s[2], &s[3]);
         MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[1], &s[4], &s[5]);
         MSSshare_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[2], &s_mul[0], &s_add[0]);
-        MSSshare_add_res_preprocess(party_id, &s_add[1], &s_mul[2], &s_mul[1]);
-        MSSshare_add_res_preprocess(party_id, &s_add[2], &s_add[1], &s[6]);
+        s_add[1] = s_mul[2] + s_mul[1];
+        s_add[2] = s_add[1] + s[6];
 
         // preprocess后需要调用这个
         if (party_id == 0) {
@@ -92,12 +92,12 @@ int main(int argc, char **argv) {
         }
 
         // calculate
-        MSSshare_add_res_calc_add(party_id, &s_add[0], &s[0], &s[1]);
+        s_add[0] = s[0] + s[1];
         MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul[0], &s[2], &s[3]);
         MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul[1], &s[4], &s[5]);
         MSSshare_mul_res_calc_mul(party_id, *netio, &s_mul[2], &s_mul[0], &s_add[0]);
-        MSSshare_add_res_calc_add(party_id, &s_add[1], &s_mul[2], &s_mul[1]);
-        MSSshare_add_res_calc_add(party_id, &s_add[2], &s_add[1], &s[6]);
+        s_add[1] = s_mul[2] + s_mul[1];
+        s_add[2] = s_add[1] + s[6];
         MSSshare_add_plain(party_id, &s_add[2], ShareValue(-10));
 
         // reconstruct
@@ -222,12 +222,12 @@ int main(int argc, char **argv) {
         // ======================================================================
         //        i: 0,   1,   2
         // s_mul[i]: c*d, e*f, (a+b) * (c*d)
-        MSSshare_p_add_res_preprocess(party_id, &s_add[0], &s[0], &s[1]);
+        s_add[0] = s[0] + s[1];
         MSSshare_p_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[0], &s[2], &s[3]);
         MSSshare_p_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[1], &s[4], &s[5]);
         MSSshare_p_mul_res_preprocess(party_id, PRGs, *netio, &s_mul[2], &s_mul[0], &s_add[0]);
-        MSSshare_p_add_res_preprocess(party_id, &s_add[1], &s_mul[2], &s_mul[1]);
-        MSSshare_p_add_res_preprocess(party_id, &s_add[2], &s_add[1], &s[6]);
+        s_add[1] = s_mul[2] + s_mul[1];
+        s_add[2] = s_add[1] + s[6];
 
         // preprocess后需要调用这个
         if (party_id == 0) {
@@ -247,13 +247,13 @@ int main(int argc, char **argv) {
         }
 
         // calculate
-        MSSshare_p_add_res_calc_add(party_id, &s_add[0], &s[0], &s[1]);
+        s_add[0] = s[0] + s[1];
         MSSshare_p_mul_res_calc_mul(party_id, *netio, &s_mul[0], &s[2], &s[3]);
         MSSshare_p_mul_res_calc_mul(party_id, *netio, &s_mul[1], &s[4], &s[5]);
         MSSshare_p_mul_res_calc_mul(party_id, *netio, &s_mul[2], &s_mul[0], &s_add[0]);
-        MSSshare_p_add_res_calc_add(party_id, &s_add[1], &s_mul[2], &s_mul[1]);
-        MSSshare_p_add_res_calc_add(party_id, &s_add[2], &s_add[1], &s[6]);
-        MSSshare_p_add_plain(party_id, &s_add[2], ShareValue(-10));
+        s_add[1] = s_mul[2] + s_mul[1];
+        s_add[2] = s_add[1] + s[6];
+        MSSshare_p_minus_plain(party_id, &s_add[2], 10);
 
         // reconstruct
         ShareValue rec[len];

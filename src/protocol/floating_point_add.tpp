@@ -1,6 +1,6 @@
 void PI_float_add_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                PRGSync private_PRG, PI_float_add_intermediate &intermediate,
-                                FLTshare *input_x, FLTshare *input_y, FLTshare *output_z) {
+                             PRGSync private_PRG, PI_float_add_intermediate &intermediate,
+                             FLTshare *input_x, FLTshare *input_y, FLTshare *output_z) {
     int lf = intermediate.lf;
     int le = intermediate.le;
 #ifdef DEBUG_MODE
@@ -73,9 +73,7 @@ void PI_float_add_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Net
     // Step 2:c_tmp1,c_tmp2,c
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &c_tmp1, &c2_mss, &c3_mss);
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &c_tmp2, &c1_mss, &c2_mss);
-    auto s1_vec = make_ptr_vec<MSSshare>(c_tmp1, c1_mss, c_tmp2);
-    auto coeff1_vec = std::vector<int>{1, 1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &c, s1_vec, coeff1_vec);
+    c = c_tmp1 + c1_mss - c_tmp2;
 
     // Step 3: 根据c选择X,Y
     auto select_inter_vec = make_ptr_vec(select_FLT_inter1.b_inter, select_FLT_inter1.t_inter,
@@ -91,10 +89,7 @@ void PI_float_add_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Net
     }
 
     // Step 4: 计算 zeta1 (le bits) = X.e - Y.e
-    MSSshare zeta1(le);
-    auto s2_vec = make_ptr_vec(X.e, Y.e);
-    auto coeff2_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &zeta1, s2_vec, coeff2_vec);
+    MSSshare zeta1 = X.e - Y.e;
 
     // Step 5: 本地生成明文分享 lf_mss (le bits)，r1=r2=0，m=lf
     MSSshare lf_mss(le);
@@ -172,14 +167,12 @@ void PI_float_add_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Net
     PI_trunc_preprocess(party_id, PRGs, netio, trunc_inter1, &z_t_prime2, 1, &z.t);
 
     // Step 18: 计算 z.e = X.e - zeta + 1
-    auto s3_vec = make_ptr_vec<MSSshare>(X.e, zeta);
-    auto coeff3_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &z.e, s3_vec, coeff3_vec);
+    z.e = X.e - zeta;
 }
 
 void PI_float_add(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                     PI_float_add_intermediate &intermediate, FLTshare *input_x,
-                     FLTshare *input_y, FLTshare *output_z) {
+                  PI_float_add_intermediate &intermediate, FLTshare *input_x, FLTshare *input_y,
+                  FLTshare *output_z) {
     int lf = intermediate.lf;
     int le = intermediate.le;
 #ifdef DEBUG_MODE
@@ -257,9 +250,7 @@ void PI_float_add(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio
     auto mul_s1_vec_1 = make_ptr_vec<MSSshare>(c2_mss, c1_mss);
     auto mul_s2_vec_1 = make_ptr_vec<MSSshare>(c3_mss, c2_mss);
     MSSshare_mul_res_calc_mul_vec(party_id, netio, mul_res_vec_1, mul_s1_vec_1, mul_s2_vec_1);
-    auto s1_vec = make_ptr_vec<MSSshare>(c_tmp1, c1_mss, c_tmp2);
-    auto coeff1_vec = std::vector<int>{1, 1, -1};
-    MSSshare_add_res_calc_add_multi(party_id, &c, s1_vec, coeff1_vec);
+    c = c_tmp1 + c1_mss - c_tmp2;
 
     // Step 3: 根据c选择X,Y
     auto select_inter_vec = make_ptr_vec(select_FLT_inter1.b_inter, select_FLT_inter1.t_inter,
@@ -273,11 +264,7 @@ void PI_float_add(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio
                   select_input_3_vec, select_output_vec);
 
     // Step 4: 计算 zeta1 (le bits) = X.e - Y.e
-    MSSshare zeta1(le);
-    auto s2_vec = make_ptr_vec(X.e, Y.e);
-    auto coeff2_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &zeta1, s2_vec, coeff2_vec);
-    MSSshare_add_res_calc_add_multi(party_id, &zeta1, s2_vec, coeff2_vec);
+    MSSshare zeta1 = X.e - Y.e;
 
     // Step 5: 本地生成明文分享 lf_mss (le bits)，r1=r2=0，m=lf
     MSSshare lf_mss(le);
@@ -371,10 +358,6 @@ void PI_float_add(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio
     PI_trunc(party_id, PRGs, netio, trunc_inter1, &z_t_prime2, 1, &z.t);
 
     // Step 18: 计算 z.e = X.e - zeta + 1
-    auto s3_vec = make_ptr_vec<MSSshare>(X.e, zeta);
-    auto coeff3_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &z.e, s3_vec, coeff3_vec);
-    if (party_id == 1 || party_id == 2) {
-        z.e.v1 = (z.e.v1 + 1) & z.e.MASK;
-    }
+    z.e = X.e - zeta;
+    MSSshare_add_plain(party_id, &z.e, 1);
 }

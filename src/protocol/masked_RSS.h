@@ -29,9 +29,41 @@ class MSSshare {
     }
 
     virtual ~MSSshare() = default;
+    MSSshare &operator=(const ShareValue &) = delete;
+
+    MSSshare operator+(const MSSshare &other) const noexcept {
+#ifdef DEBUG_MODE
+        if (this->BITLEN != other.BITLEN) {
+            error("MSSshare operator+: bit-length mismatch");
+        }
+#endif
+        MSSshare res = *this;
+        res.v1 = (this->v1 + other.v1) & MASK;
+        res.v2 = (this->v2 + other.v2) & MASK;
+        return res;
+    }
+
+    MSSshare operator-(const MSSshare &other) const noexcept {
+#ifdef DEBUG_MODE
+        if (this->BITLEN != other.BITLEN) {
+            error("MSSshare operator-: bit-length mismatch");
+        }
+#endif
+        MSSshare res = *this;
+        res.v1 = (this->v1 - other.v1) & MASK;
+        res.v2 = (this->v2 - other.v2) & MASK;
+        return res;
+    }
+
+    MSSshare operator*(ShareValue plain_val) const noexcept {
+        MSSshare res = *this;
+        res.v1 = (this->v1 * plain_val) & MASK;
+        res.v2 = (this->v2 * plain_val) & MASK;
+        return res;
+    }
 };
 
-class MSSshare_mul_res : virtual public MSSshare {
+class MSSshare_mul_res : public MSSshare {
   public:
     // To calculate s3 = s1 * s2:
     // For party 0, s3.v3 = [ (s1.r1 + s1.r2) * (s2.r1 + s2.r2) ]_1
@@ -40,8 +72,8 @@ class MSSshare_mul_res : virtual public MSSshare {
     ShareValue v3 = 0;
 
     MSSshare_mul_res(int ell) : MSSshare(ell) {}
-
     virtual ~MSSshare_mul_res() = default;
+    MSSshare_mul_res &operator=(const ShareValue &) = delete;
 };
 
 // ===============================================================
@@ -67,25 +99,6 @@ inline ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare *s
  */
 inline void MSSshare_preprocess(const int secret_holder_id, const int party_id,
                                 std::vector<PRGSync> &PRGs, NetIOMP &netio, MSSshare *s);
-
-/* 预处理MSSshare_add_res对象
- * @param party_id: 参与方id，0/1/2
- * @param res: 预处理的MSSshare_add_res对象指针
- * @param s1: 第一个作为加法输入的分享对象的指针
- * @param s2: 第二个作为加法输入的分享对象的指针
- */
-inline void MSSshare_add_res_preprocess(const int party_id, MSSshare *res, MSSshare *s1,
-                                        MSSshare *s2);
-
-/* 预处理MSSshare_add_res对象，结果为多个分享对象的带系数累加
- * @param party_id: 参与方id，0/1/2
- * @param res: 预处理的MSSshare_add_res对象指针
- * @param s_vec: 多个作为加法输入的分享对象的指针数组
- * @param coeff_vec: 对应的明文系数数组，可以是负数
- */
-inline void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare *res,
-                                              std::vector<MSSshare *> &s_vec,
-                                              std::vector<int> &coeff_vec);
 
 /* 预处理MSSshare_mul_res对象
  * @param party_id: 参与方id，0/1/2
@@ -124,25 +137,6 @@ inline void MSSshare_share_from_store(const int party_id, NetIOMP &netio, MSSsha
  */
 inline void MSSshare_add_plain(const int party_id, MSSshare *s, ShareValue x);
 
-/*密文加法
- * @param party_id: 参与方id，0/1/2
- * @param res: 作为结果输出的MSSshare_add_res对象指针
- * @param s1: 第一个作为加法输入的分享对象的指针
- * @param s2: 第二个作为加法输入的分享对象的指针
- */
-inline void MSSshare_add_res_calc_add(const int party_id, MSSshare *res, MSSshare *s1,
-                                      MSSshare *s2);
-
-/*密文加法，带系数累加
- * @param party_id: 参与方id，0/1/2
- * @param res: 作为结果输出的MSSshare_add_res对象指针
- * @param s_vec: 多个作为加法输入的分享对象的指针数组
- * @param coeff_vec: 对应的明文系数数组，可以是负数
- */
-inline void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare *res,
-                                            std::vector<MSSshare *> &s_vec,
-                                            std::vector<int> &coeff_vec);
-
 /*密文乘法
  * @param party_id: 参与方id，0/1/2
  * @param netio: 多方通信接口
@@ -154,152 +148,13 @@ inline void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSsha
                                       const MSSshare *s1, const MSSshare *s2);
 
 /*密文乘法的向量化版本
-*/
+ */
 inline void MSSshare_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
                                           std::vector<MSSshare_mul_res *> &res_vec,
-                                          std::vector<MSSshare *> &s1_vec, std::vector<MSSshare *> &s2_vec);
+                                          std::vector<MSSshare *> &s1_vec,
+                                          std::vector<MSSshare *> &s2_vec);
 
 inline void MSSshare_from_p(MSSshare *to, MSSshare_p *from);
 
 inline void MSSshare_mul_res_from_p(MSSshare_mul_res *to, MSSshare_p_mul_res *from);
 #include "protocol/masked_RSS.tpp"
-
-// // 压缩函数：将vector<ShareValue>的前ell比特压缩到string
-// template <int ell> std::string compress_shares(const std::vector<ShareValue> &values) {
-//     if (values.empty())
-//         return "";
-
-//     const ShareValue MASK =
-//         (ell == ShareValue_BitLength) ? ~ShareValue(0) : ((ShareValue(1) << ell) - 1);
-//     const size_t num_values = values.size();
-//     const size_t total_bits = num_values * ell;
-//     const size_t total_bytes = (total_bits + 7) / 8; // 向上取整
-
-//     std::string result(total_bytes, 0);
-
-//     size_t bit_offset = 0;
-//     for (size_t i = 0; i < num_values; i++) {
-//         ShareValue masked_value = values[i] & MASK;
-
-//         // 将ell比特的数据写入到result中
-//         for (int bit = 0; bit < ell; bit++) {
-//             if (masked_value & (ShareValue(1) << bit)) {
-//                 size_t byte_pos = bit_offset / 8;
-//                 size_t bit_pos = bit_offset % 8;
-//                 result[byte_pos] |= (1 << bit_pos);
-//             }
-//             bit_offset++;
-//         }
-//     }
-
-//     return result;
-// }
-
-// // 解压缩函数：从string解压到vector<ShareValue>
-// template <int ell>
-// std::vector<ShareValue> decompress_shares(const std::string &compressed, size_t num_values) {
-//     if (compressed.empty() || num_values == 0)
-//         return {};
-
-//     const ShareValue MASK =
-//         (ell == ShareValue_BitLength) ? ~ShareValue(0) : ((ShareValue(1) << ell) - 1);
-//     std::vector<ShareValue> result(num_values, 0);
-
-//     size_t bit_offset = 0;
-//     for (size_t i = 0; i < num_values; i++) {
-//         ShareValue value = 0;
-
-//         // 从compressed中读取ell比特的数据
-//         for (int bit = 0; bit < ell; bit++) {
-//             size_t byte_pos = bit_offset / 8;
-//             size_t bit_pos = bit_offset % 8;
-
-//             if (byte_pos < compressed.size() && (compressed[byte_pos] & (1 << bit_pos))) {
-//                 value |= (ShareValue(1) << bit);
-//             }
-//             bit_offset++;
-//         }
-
-//         result[i] = value & MASK;
-//     }
-
-//     return result;
-// }
-
-// template <int ell>
-// void calc_mul_vec(std::vector<std::shared_ptr<MSSshare_mul_res>> shares, NetIOMP &netio) {
-//     if (shares.empty())
-//         return;
-
-//     netio.sync();
-
-//     const int num_shares = shares.size();
-//     const ShareValue MASK = MSSshare::MASK;
-//     const int party_id = MSSshare::party_id;
-
-// #ifdef DEBUG_MODE
-//     // 检查所有shares的状态
-//     for (size_t i = 0; i < shares.size(); i++) {
-//         if (!shares[i]->has_preprocess) {
-//             error("calc_mul_vec: share[" + std::to_string(i) + "] must be preprocessed");
-//         }
-//         if (!shares[i]->s1->has_shared || !shares[i]->s2->has_shared) {
-//             error("calc_mul_vec: share[" + std::to_string(i) + "]'s inputs must be shared");
-//         }
-//         shares[i]->has_shared = true;
-//     }
-// #endif
-
-//     if (party_id == 1 || party_id == 2) {
-//         // 准备发送数据的缓冲区
-//         std::vector<ShareValue> send_data;
-//         send_data.reserve(num_shares);
-
-//         // 计算所有乘法的中间结果
-//         for (int i = 0; i < num_shares; i++) {
-//             auto &share = shares[i];
-//             ShareValue temp = 0;
-
-//             // 计算 s1.v1 * s2.v2 + s1.v2 * s2.v1 + v3 - v2
-//             temp += share->s1->v1 * share->s2->v2;
-//             temp += share->s1->v2 * share->s2->v1;
-//             temp += share->v3;
-//             temp -= share->v2;
-
-//             // Party 1 还需要加上 s1.v1 * s2.v1
-//             if (party_id == 1) {
-//                 temp += share->s1->v1 * share->s2->v1;
-//             }
-
-//             temp &= MASK;
-//             send_data.push_back(temp);
-//         }
-
-//         // 压缩发送数据
-//         std::string compressed_send = compress_shares<ell>(send_data);
-//         std::string compressed_recv;
-
-//         // 计算压缩后的数据大小
-//         const size_t compressed_size = (num_shares * ell + 7) / 8;
-//         compressed_recv.resize(compressed_size);
-
-//         // 一次性发送和接收压缩后的数据
-//         if (party_id == 1) {
-//             // Party 1 -> Party 2
-//             netio.send_data(2, compressed_send.data(), compressed_send.size());
-//             netio.recv_data(2, compressed_recv.data(), compressed_recv.size());
-//         } else if (party_id == 2) {
-//             // Party 2 <- Party 1
-//             netio.recv_data(1, compressed_recv.data(), compressed_recv.size());
-//             netio.send_data(1, compressed_send.data(), compressed_send.size());
-//         }
-
-//         // 解压缩接收到的数据
-//         std::vector<ShareValue> recv_data = decompress_shares<ell>(compressed_recv, num_shares);
-
-//         // 计算最终结果
-//         for (int i = 0; i < num_shares; i++) {
-//             shares[i]->v1 = (recv_data[i] + send_data[i]) & MASK;
-//         }
-//     }
-// }

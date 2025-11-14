@@ -116,71 +116,6 @@ void MSSshare_add_plain(const int party_id, MSSshare *s, ShareValue x) {
     }
 }
 
-void MSSshare_add_res_preprocess(const int party_id, MSSshare *res, MSSshare *s1, MSSshare *s2) {
-    auto s_vec = make_ptr_vec(*s1, *s2);
-    auto coeff_vec = std::vector<int>{1, 1};
-    MSSshare_add_res_preprocess_multi(party_id, res, s_vec, coeff_vec);
-}
-
-void MSSshare_add_res_preprocess_multi(const int party_id, MSSshare *res,
-                                       std::vector<MSSshare *> &s_vec,
-                                       std::vector<int> &coeff_vec) {
-#ifdef DEBUG_MODE
-    if (s_vec.size() != coeff_vec.size()) {
-        error("MSSshare_add_res_preprocess_multi: size of s_vec and coeff_vec must be equal");
-    }
-    int DEBUG_bitlen = res->BITLEN;
-    for (size_t i = 0; i < s_vec.size(); i++) {
-        if (!s_vec[i]->has_preprocess) {
-            error("MSSshare_add_res_preprocess_multi: all shares must have been preprocessed");
-        }
-        if (s_vec[i]->BITLEN != DEBUG_bitlen) {
-            error("MSSshare_add_res_preprocess_multi: bit-length mismatch");
-        }
-    }
-    res->has_preprocess = true;
-#endif
-    res->v1 = 0;
-    res->v2 = 0;
-    for (size_t i = 0; i < s_vec.size(); i++) {
-        res->v1 = (res->v1 + coeff_vec[i] * s_vec[i]->v1) & res->MASK;
-        res->v2 = (res->v2 + coeff_vec[i] * s_vec[i]->v2) & res->MASK;
-    }
-}
-
-void MSSshare_add_res_calc_add(const int party_id, MSSshare *res, MSSshare *s1, MSSshare *s2) {
-    auto s_vec = make_ptr_vec(*s1, *s2);
-    auto coeff_vec = std::vector<int>{1, 1};
-    MSSshare_add_res_calc_add_multi(party_id, res, s_vec, coeff_vec);
-}
-
-void MSSshare_add_res_calc_add_multi(const int party_id, MSSshare *res,
-                                     std::vector<MSSshare *> &s_vec, std::vector<int> &coeff_vec) {
-#ifdef DEBUG_MODE
-    if (s_vec.size() != coeff_vec.size()) {
-        error("MSSshare_add_res_calc_add_multi: size of s_vec and coeff_vec must be equal");
-    }
-    int DEBUG_bitlen = res->BITLEN;
-    for (size_t i = 0; i < s_vec.size(); i++) {
-        if (!s_vec[i]->has_shared) {
-            error("MSSshare_add_res_calc_add_multi: all shares must have been shared");
-        }
-        if (s_vec[i]->BITLEN != DEBUG_bitlen) {
-            error("MSSshare_add_res_calc_add_multi: bit-length mismatch");
-        }
-    }
-    res->has_shared = true;
-#endif
-    if (party_id == 0) {
-        return;
-    }
-
-    res->v1 = 0;
-    for (size_t i = 0; i < s_vec.size(); i++) {
-        res->v1 = (res->v1 + coeff_vec[i] * s_vec[i]->v1) & res->MASK;
-    }
-}
-
 void MSSshare_mul_res_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                                  MSSshare_mul_res *res, const MSSshare *s1, const MSSshare *s2) {
 
@@ -236,16 +171,13 @@ void MSSshare_mul_res_calc_mul(const int party_id, NetIOMP &netio, MSSshare_mul_
     temp += s1->v2 * s2->v1;
     temp += res->v3;
     temp -= res->v2;
-
     if (party_id == 1) {
         temp += s1->v1 * s2->v1;
-        netio.send_data(2, &temp, res->BYTELEN);
-
-        netio.recv_data(2, &recv_temp, res->BYTELEN);
-    } else if (party_id == 2) {
-        netio.recv_data(1, &recv_temp, res->BYTELEN);
-        netio.send_data(1, &temp, res->BYTELEN);
     }
+
+    netio.send_data(3 - party_id, &temp, res->BYTELEN);
+    netio.recv_data(3 - party_id, &recv_temp, res->BYTELEN);
+
     res->v1 = (recv_temp + temp) & res->MASK;
 }
 
@@ -280,14 +212,6 @@ inline void MSSshare_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
     }
 
     int vec_len = res_vec.size();
-    int total_bits = 0;
-    int total_bytes = 0;
-    encoded_msg msg, msg_recv;
-
-    for (int i = 0; i < vec_len; i++) {
-        total_bits += res_vec[i]->BITLEN;
-    }
-    total_bytes = (total_bits + 7) / 8;
 
     for (int i = 0; i < vec_len; i++) {
         auto &res = res_vec[i];
@@ -303,30 +227,14 @@ inline void MSSshare_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
         if (party_id == 1) {
             temp += s1->v1 * s2->v1;
         }
-        msg.add_msg((char *)&temp, res->BITLEN);
         res->v1 = temp & res->MASK;
-    }
-
-    if (party_id == 1) {
-        std::vector<char> tmp(total_bytes);
-        msg.to_char_array(tmp.data());
-        netio.send_data(2, tmp.data(), total_bytes);
-
-        netio.recv_data(2, tmp.data(), total_bytes);
-        msg_recv.from_char_array(tmp.data(), total_bytes);
-    } else if (party_id == 2) {
-        std::vector<char> tmp(total_bytes);
-        netio.recv_data(1, tmp.data(), total_bytes);
-        msg_recv.from_char_array(tmp.data(), total_bytes);
-
-        msg.to_char_array(tmp.data());
-        netio.send_data(1, tmp.data(), total_bytes);
+        netio.send_data(3 - party_id, &temp, res->BYTELEN);
     }
 
     for (int i = 0; i < vec_len; i++) {
         auto &res = res_vec[i];
         ShareValue recv_temp = 0;
-        msg_recv.read_msg((char *)&recv_temp, res->BITLEN);
+        netio.recv_data(3 - party_id, &recv_temp, res->BYTELEN);
         res->v1 = (recv_temp + res->v1) & res->MASK;
     }
 }

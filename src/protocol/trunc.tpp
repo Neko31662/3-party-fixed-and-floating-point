@@ -61,9 +61,7 @@ void PI_trunc_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     }
 
     // Step 4: 预处理z = xprime - bprime
-    auto s_vec = make_ptr_vec(xprime, bprime);
-    auto coeff_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &z, s_vec, coeff_vec);
+    z = xprime - bprime;
 }
 
 void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -127,10 +125,6 @@ void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     }
 
     // Step 4: 计算z = xprime - bprime + 1
-    auto s_vec = make_ptr_vec(xprime, bprime);
-    auto coeff_vec = std::vector<int>{1, -1};
-    MSSshare_add_res_calc_add_multi(party_id, &z, s_vec, coeff_vec);
-    if (party_id == 1 || party_id == 2) {
-        z.v1 = (z.v1 + 1) & z.MASK;
-    }
+    z = xprime - bprime;
+    MSSshare_add_plain(party_id, &z, 1);
 }

@@ -85,18 +85,10 @@ void PI_float_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
     c_le.v2 = c_mss.v2 & c_le.MASK;
 
     // Step 9: z.e = x.e + y.e + c_le - 2^(le-1)
-    auto s1_vec = make_ptr_vec(x.e, y.e, c_le);
-    auto coeff1_vec = std::vector<int>{1, 1, 1};
-    MSSshare z_e_tmp(le);
-    MSSshare_add_res_preprocess_multi(party_id, &z_e_tmp, s1_vec, coeff1_vec);
-    z.e = z_e_tmp;
+    z.e = x.e + y.e + c_le;
 
     // Step 10: z.b = x.b + y.b - 2 * x.b * y.b
-    auto s2_vec = make_ptr_vec(x.b, y.b, bx_mul_by);
-    auto coeff2_vec = std::vector<int>{1, 1, -2};
-    MSSshare z_b_tmp(1);
-    MSSshare_add_res_preprocess_multi(party_id, &z_b_tmp, s2_vec, coeff2_vec);
-    z.b = z_b_tmp;
+    z.b = x.b + y.b - (bx_mul_by * 2);
 }
 
 void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -193,21 +185,9 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     c_le.v2 = c_mss.v2 & c_le.MASK;
 
     // Step 9: z.e = x.e + y.e + c_le - 2^(le-1)
-    auto s1_vec = make_ptr_vec(x.e, y.e, c_le);
-    auto coeff1_vec = std::vector<int>{1, 1, 1};
-    MSSshare z_e_tmp(le);
-    MSSshare_add_res_preprocess_multi(party_id, &z_e_tmp, s1_vec, coeff1_vec);
-    MSSshare_add_res_calc_add_multi(party_id, &z_e_tmp, s1_vec, coeff1_vec);
-    z.e = z_e_tmp;
-    if (party_id == 1 || party_id == 2) {
-        z.e.v1 = (z.e.v1 - (ShareValue(1) << (le - 1))) & z.e.MASK;
-    }
+    z.e = x.e + y.e + c_le;
+    MSSshare_add_plain(party_id, &z.e, -(ShareValue(1) << (le - 1)));
 
     // Step 10: z.b = x.b + y.b - 2 * x.b * y.b
-    auto s2_vec = make_ptr_vec(x.b, y.b, bx_mul_by);
-    auto coeff2_vec = std::vector<int>{1, 1, -2};
-    MSSshare z_b_tmp(1);
-    MSSshare_add_res_preprocess_multi(party_id, &z_b_tmp, s2_vec, coeff2_vec);
-    MSSshare_add_res_calc_add_multi(party_id, &z_b_tmp, s2_vec, coeff2_vec);
-    z.b = z_b_tmp;
+    z.b = x.b + y.b - (bx_mul_by * 2);
 }

@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
+    cout << "PI_great test passed!" << endl;
 
     // 向量测试
     int vec_size = 10;
@@ -183,4 +184,5 @@ int main(int argc, char **argv) {
             }
         }
     }
+    cout << "PI_great_vec test passed!" << endl;
 }

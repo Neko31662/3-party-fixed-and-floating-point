@@ -236,9 +236,7 @@ void PI_wrap1_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate, &tmpx, &b);
     MSSshare_p_mul_res_preprocess(party_id, PRGs, netio, &b_mul_c, &b, &c);
 
-    auto s_vec = std::vector<MSSshare_p *>{&b, &c, &b_mul_c};
-    auto coeff_vec = std::vector<int>{1, 1, -2};
-    MSSshare_p_add_res_preprocess_multi(party_id, &z, s_vec, coeff_vec);
+    z = b + c - (b_mul_c * 2);
 }
 
 void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -272,7 +270,7 @@ void PI_wrap2_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     MSSshare_p &d = intermediate.d;
 
     PI_wrap1_preprocess(party_id, PRGs, netio, wrap1_intermediate, &x, &d);
-    MSSshare_p_add_res_preprocess(party_id, &z, &d, &wrap1_intermediate.c);
+    z = d + wrap1_intermediate.c;
 }
 
 void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -311,9 +309,7 @@ void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
 
     PI_sign(party_id, PRGs, netio, sign_intermediate, &tmpx, &b);
     MSSshare_p_mul_res_calc_mul(party_id, netio, &b_mul_c, &b, &c);
-    auto s_vec = std::vector<MSSshare_p *>{&b, &c, &b_mul_c};
-    auto coeff_vec = std::vector<int>{1, 1, -2};
-    MSSshare_p_add_res_calc_add_multi(party_id, &z, s_vec, coeff_vec);
+    z = b + c - (b_mul_c * 2);
 }
 
 void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -344,5 +340,5 @@ void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     MSSshare_p &d = intermediate.d;
 
     PI_wrap1(party_id, PRGs, netio, wrap1_intermediate, &x, &d);
-    MSSshare_p_add_res_calc_add(party_id, &z, &d, &wrap1_intermediate.c);
+    z = d + wrap1_intermediate.c;
 }

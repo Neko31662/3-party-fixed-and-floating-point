@@ -71,20 +71,18 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     PI_shift_preprocess(party_id, PRGs, netio, shift_intermediate, &x, &xprime_mss);
 
     // Step 4: xprime2
-    MSSshare_add_res_preprocess(party_id, &xprime2_mss, &xprime_mss, &xprime_mss);
+    xprime2_mss = xprime_mss * 2;
 
     // Step 5: sign
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate, &xprime_mss, &c_mssp);
 
     // Step 6: tmp1, tmp2, temp_z
-    std::vector<MSSshare *> s_vec1{&xprime_mss, &xprime2_mss};
-    std::vector<int> coeff1{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &tmp1, s_vec1, coeff1);
+    tmp1 = xprime_mss - xprime2_mss;
 
     MSSshare_from_p(&c_mss, &c_mssp);
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &tmp2, &c_mss, &tmp1);
 
-    MSSshare_add_res_preprocess(party_id, &temp_z_mss, &xprime2_mss, &tmp2);
+    temp_z_mss = xprime2_mss + tmp2;
 
     // Step 7: c_mss2
     c_mss2.v1 = c_mss.v1 & c_mss2.MASK;
@@ -99,9 +97,7 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     MSSshare_from_p(&zeta1_mss, &zeta1_mssp);
 
     // Step 9: temp_zeta
-    std::vector<MSSshare *> s_vec2{&zeta1_mss, &c_mss2};
-    std::vector<int> coeff2{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &temp_zeta_mss, s_vec2, coeff2);
+    temp_zeta_mss = zeta1_mss - c_mss2;
 
     // Step 10: signx
     MSSshare_p n_signx_mssp{(ShareValue(1) << ell)};
@@ -111,9 +107,7 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
 
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate2, &x, &signx_mssp);
 
-    auto s_vec3 = std::vector<MSSshare_p *>{&signx_mssp};
-    auto coeff3 = std::vector<int>{-1};
-    MSSshare_p_add_res_preprocess_multi(party_id, &n_signx_mssp, s_vec3, coeff3);
+    n_signx_mssp = signx_mssp * (-1);
 
     MSSshare_from_p(&n_signx_mss, &n_signx_mssp);
 
@@ -124,12 +118,10 @@ inline void PI_align_preprocess(const int party_id, std::vector<PRGSync> &PRGs, 
     n_signx_mss2.has_shared = n_signx_mss.has_shared;
 #endif
 
-    auto s_vec4 = std::vector<MSSshare *>{&temp_z_mss, &x};
-    auto coeff4 = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &temp_z_minus_x, s_vec4, coeff4);
+    temp_z_minus_x = temp_z_mss - x;
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &temp_z2_mss, &temp_z_minus_x, &n_signx_mss);
     MSSshare_mul_res_preprocess(party_id, PRGs, netio, &zeta, &temp_zeta_mss, &n_signx_mss2);
-    MSSshare_add_res_preprocess(party_id, &z, &x, &temp_z2_mss);
+    z = x + temp_z2_mss;
 }
 
 inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -243,20 +235,18 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     }
 
     // Step 8: xprime2
-    MSSshare_add_res_calc_add(party_id, &xprime2_mss, &xprime_mss, &xprime_mss);
+    xprime2_mss = xprime_mss * 2;
 
     // Step 9: sign to compute c_mss
     PI_sign(party_id, PRGs, netio, sign_intermediate, &xprime_mss, &c_mssp);
     MSSshare_from_p(&c_mss, &c_mssp);
 
     // Step 10: tmp1, tmp2, z
-    std::vector<MSSshare *> s_vec1{&xprime_mss, &xprime2_mss};
-    std::vector<int> coeff1{1, -1};
-    MSSshare_add_res_calc_add_multi(party_id, &tmp1, s_vec1, coeff1);
+    tmp1 = xprime_mss - xprime2_mss;
 
     MSSshare_mul_res_calc_mul(party_id, netio, &tmp2, &c_mss, &tmp1);
 
-    MSSshare_add_res_calc_add(party_id, &temp_z_mss, &xprime2_mss, &tmp2);
+    temp_z_mss = xprime2_mss + tmp2;
 
     // Step 11: c_mss2
     c_mss2.v1 = c_mss.v1 & c_mss2.MASK;
@@ -271,9 +261,7 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     MSSshare_from_p(&zeta1_mss, &zeta1_mssp);
 
     // Step 13: zeta
-    std::vector<MSSshare *> s_vec2{&zeta1_mss, &c_mss2};
-    std::vector<int> coeff2{1, -1};
-    MSSshare_add_res_calc_add_multi(party_id, &temp_zeta_mss, s_vec2, coeff2);
+    temp_zeta_mss = zeta1_mss - c_mss2;
 
     // Step 14: signx
     MSSshare_p n_signx_mssp{(ShareValue(1) << ell)};
@@ -283,10 +271,7 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
 
     PI_sign(party_id, PRGs, netio, sign_intermediate2, &x, &signx_mssp);
 
-    auto s_vec3 = std::vector<MSSshare_p *>{&signx_mssp};
-    auto coeff3 = std::vector<int>{-1};
-    MSSshare_p_add_res_preprocess_multi(party_id, &n_signx_mssp, s_vec3, coeff3);
-    MSSshare_p_add_res_calc_add_multi(party_id, &n_signx_mssp, s_vec3, coeff3);
+    n_signx_mssp = signx_mssp * (-1);
     MSSshare_p_add_plain(party_id, &n_signx_mssp, 1);
 
     MSSshare_from_p(&n_signx_mss, &n_signx_mssp);
@@ -298,11 +283,8 @@ inline void PI_align(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &ne
     n_signx_mss2.has_shared = n_signx_mss.has_shared;
 #endif
 
-    auto s_vec4 = std::vector<MSSshare *>{&temp_z_mss, &x};
-    auto coeff4 = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &temp_z_minus_x, s_vec4, coeff4);
-    MSSshare_add_res_calc_add_multi(party_id, &temp_z_minus_x, s_vec4, coeff4);
+    temp_z_minus_x = temp_z_mss - x;
     MSSshare_mul_res_calc_mul(party_id, netio, &temp_z2_mss, &temp_z_minus_x, &n_signx_mss);
     MSSshare_mul_res_calc_mul(party_id, netio, &zeta, &temp_zeta_mss, &n_signx_mss2);
-    MSSshare_add_res_calc_add(party_id, &z, &x, &temp_z2_mss);
+    z = x + temp_z2_mss;
 }

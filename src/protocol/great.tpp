@@ -37,10 +37,7 @@ void PI_great_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     MSSshare_p_mul_res &tmp2 = intermediate.tmp2;
 
     // y - x
-    MSSshare tmp_add1(ell);
-    auto add_vec1 = make_ptr_vec(y, x);
-    auto coeff_vec1 = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &tmp_add1, add_vec1, coeff_vec1);
+    MSSshare tmp_add1 = y - x;
 
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate[0], &x, &sign_res[0]);        // sx
     PI_sign_preprocess(party_id, PRGs, netio, sign_intermediate[1], &y, &sign_res[1]);        // sy
@@ -50,18 +47,13 @@ void PI_great_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP
     MSSshare_p_mul_res_preprocess(party_id, PRGs, netio, &tmp1, &sign_res[0], &sign_res[1]);
 
     // 1 - sx - sy + 2sx*sy
-    MSSshare_p tmp_add2{k};
-    auto add_vec2 = make_ptr_vec(sign_res[0], sign_res[1], tmp1);
-    auto coeff_vec2 = std::vector<int>{-1, -1, 2};
-    MSSshare_p_add_res_preprocess_multi(party_id, &tmp_add2, add_vec2, coeff_vec2);
+    MSSshare_p tmp_add2 = (tmp1 * 2) - sign_res[0] - sign_res[1];
 
     // (1 - sx - sy + 2sx*sy) * sd
     MSSshare_p_mul_res_preprocess(party_id, PRGs, netio, &tmp2, &tmp_add2, &sign_res[2]);
 
     // b = (1 - sx - sy + 2sx*sy) * sd - sx*sy + sy
-    auto final_add_vec = make_ptr_vec<MSSshare_p>(tmp2, tmp1, sign_res[1]);
-    auto final_coeff_vec = std::vector<int>{1, -1, 1};
-    MSSshare_p_add_res_preprocess_multi(party_id, &b, final_add_vec, final_coeff_vec);
+    b = tmp2 - tmp1 + sign_res[1];
 }
 
 void PI_great(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -99,11 +91,7 @@ void PI_great(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     MSSshare_p_mul_res &tmp2 = intermediate.tmp2;
 
     // y - x
-    MSSshare tmp_add1(ell);
-    auto add_vec1 = make_ptr_vec(y, x);
-    auto coeff_vec1 = std::vector<int>{1, -1};
-    MSSshare_add_res_preprocess_multi(party_id, &tmp_add1, add_vec1, coeff_vec1);
-    MSSshare_add_res_calc_add_multi(party_id, &tmp_add1, add_vec1, coeff_vec1);
+    MSSshare tmp_add1 = y - x;
 
     auto sign_intermediate_vec = make_ptr_vec(sign_intermediate);
     auto sign_input_vec = make_ptr_vec(x, y, tmp_add1);
@@ -115,22 +103,14 @@ void PI_great(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     MSSshare_p_mul_res_calc_mul(party_id, netio, &tmp1, &sign_res[0], &sign_res[1]);
 
     // 1 - sx - sy + 2sx*sy
-    MSSshare_p tmp_add2{k};
-    auto add_vec2 = make_ptr_vec(sign_res[0], sign_res[1], tmp1);
-    auto coeff_vec2 = std::vector<int>{-1, -1, 2};
-    MSSshare_p_add_res_preprocess_multi(party_id, &tmp_add2, add_vec2, coeff_vec2);
-    MSSshare_p_add_res_calc_add_multi(party_id, &tmp_add2, add_vec2, coeff_vec2);
-    if (party_id == 1 || party_id == 2) {
-        tmp_add2.v1 = (tmp_add2.v1 + 1) % tmp_add2.p;
-    }
+    MSSshare_p tmp_add2 = (tmp1 * 2) - sign_res[0] - sign_res[1];
+    MSSshare_p_add_plain(party_id, &tmp_add2, 1);
 
     // (1 - sx - sy + 2sx*sy) * sd
     MSSshare_p_mul_res_calc_mul(party_id, netio, &tmp2, &tmp_add2, &sign_res[2]);
 
     // b = (1 - sx - sy + 2sx*sy) * sd - sx*sy + sy
-    auto final_add_vec = make_ptr_vec<MSSshare_p>(tmp2, tmp1, sign_res[1]);
-    auto final_coeff_vec = std::vector<int>{1, -1, 1};
-    MSSshare_p_add_res_calc_add_multi(party_id, &b, final_add_vec, final_coeff_vec);
+    b = tmp2 - tmp1 + sign_res[1];
 }
 
 void PI_great_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
@@ -190,11 +170,7 @@ void PI_great_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio
         ShareValue k = intermediate.k;
 
         // y - x
-        MSSshare tmp_add1(ell);
-        auto add_vec1 = make_ptr_vec(y, x);
-        auto coeff_vec1 = std::vector<int>{1, -1};
-        MSSshare_add_res_preprocess_multi(party_id, &tmp_add1, add_vec1, coeff_vec1);
-        MSSshare_add_res_calc_add_multi(party_id, &tmp_add1, add_vec1, coeff_vec1);
+        MSSshare tmp_add1 = y - x;
         tmp_add1_vec.push_back(tmp_add1);
 
         std::vector<PI_sign_intermediate *> sign_intermediate_vec_tmp =
@@ -244,14 +220,8 @@ void PI_great_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio
         int ell = intermediate.ell;
         ShareValue k = intermediate.k;
 
-        MSSshare_p tmp_add2{k};
-        auto add_vec2 = make_ptr_vec(sign_res[0], sign_res[1], tmp1);
-        auto coeff_vec2 = std::vector<int>{-1, -1, 2};
-        MSSshare_p_add_res_preprocess_multi(party_id, &tmp_add2, add_vec2, coeff_vec2);
-        MSSshare_p_add_res_calc_add_multi(party_id, &tmp_add2, add_vec2, coeff_vec2);
-        if (party_id == 1 || party_id == 2) {
-            tmp_add2.v1 = (tmp_add2.v1 + 1) % tmp_add2.p;
-        }
+        MSSshare_p tmp_add2 = (tmp1 * 2) - sign_res[0] - sign_res[1];
+        MSSshare_p_add_plain(party_id, &tmp_add2, 1);
         tmp_add2_vec.push_back(tmp_add2);
     }
 
@@ -284,8 +254,6 @@ void PI_great_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio
         int ell = intermediate.ell;
         ShareValue k = intermediate.k;
 
-        auto final_add_vec = make_ptr_vec<MSSshare_p>(tmp2, tmp1, sign_res[1]);
-        auto final_coeff_vec = std::vector<int>{1, -1, 1};
-        MSSshare_p_add_res_calc_add_multi(party_id, &b, final_add_vec, final_coeff_vec);
+        b = tmp2 - tmp1 + sign_res[1];
     }
 }
