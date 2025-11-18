@@ -54,7 +54,11 @@ int main(int argc, char **argv) {
         PI_wrap1_spec_preprocess(party_id, PRGs, *netio, intermediate1, &x_share, &z1_share);
         PI_wrap2_spec_preprocess(party_id, PRGs, *netio, intermediate2, &x_share, &z2_share);
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 
@@ -130,7 +134,11 @@ int main(int argc, char **argv) {
         PI_wrap1_preprocess(party_id, PRGs, *netio, intermediate1, &x_share, &z1_share);
         PI_wrap2_preprocess(party_id, PRGs, *netio, intermediate2, &x_share, &z2_share);
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 

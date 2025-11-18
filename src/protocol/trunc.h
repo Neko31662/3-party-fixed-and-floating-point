@@ -26,4 +26,9 @@ void PI_trunc(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_trunc_intermediate &intermediate, MSSshare *input_x, int input_bits,
               MSSshare *output_z);
 
+void PI_trunc_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                  std::vector<PI_trunc_intermediate *> &intermediate_vec,
+                  std::vector<MSSshare *> input_x_vec, int input_bits,
+                  std::vector<MSSshare *> output_z_vec);
+
 #include "protocol/trunc.tpp"

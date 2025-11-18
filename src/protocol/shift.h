@@ -43,4 +43,9 @@ void PI_shift(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_shift_intermediate &intermediate, MSSshare *input_x, ADDshare<> *input_k,
               MSSshare_mul_res *output_res);
 
+void PI_shift_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                  std::vector<PI_shift_intermediate *> &intermediate_vec,
+                  std::vector<MSSshare *> &input_x_vec, std::vector<ADDshare<> *> &input_k_vec,
+                  std::vector<MSSshare_mul_res *> &output_res_vec);
+
 #include "protocol/shift.tpp"

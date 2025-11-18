@@ -2,6 +2,7 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
                         PI_sign_intermediate &intermediate, MSSshare *input_x,
                         MSSshare_p *output_b) {
     int ell = intermediate.ell;
+    ShareValue k = intermediate.k;
 #ifdef DEBUG_MODE
     if (!input_x->has_preprocess) {
         error("PI_sign_preprocess: input_x must be preprocessed before calling PI_sign_preprocess");
@@ -12,7 +13,7 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
     if (output_b->has_preprocess) {
         error("PI_sign_preprocess: output_b has already been preprocessed");
     }
-    if (output_b->p != intermediate.k) {
+    if (output_b->p != k) {
         error("PI_sign_preprocess: output_b modulus mismatch");
     }
     if (input_x->BITLEN != ell) {
@@ -21,7 +22,6 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
     intermediate.has_preprocess = true;
 #endif
 
-    ShareValue k = intermediate.k;
     MSSshare &x = *input_x;
     MSSshare_p &b = *output_b;
     MSSshare_p &r_prime = intermediate.r_prime;
@@ -29,22 +29,8 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
     ShareValue &Gamma = intermediate.Gamma;
     std::vector<ShareValue> &rx_list = intermediate.rx_list;
     ShareValue p = intermediate.p;
-
-    ShareValue MASK_p = 1;
-    int bitp = 1;
-    while (MASK_p + 1 < p) {
-        MASK_p = (MASK_p << 1) | 1;
-        bitp++;
-    }
-    int bytep = (bitp + 7) / 8;
-
-    ShareValue MASK_k = 1;
-    int bitk = 1;
-    while (MASK_k + 1 < k) {
-        MASK_k = (MASK_k << 1) | 1;
-        bitk++;
-    }
-    int bytek = (bitk + 7) / 8;
+    int bytep = byte_of(p);
+    int bytek = byte_of(k);
 
     // Step 1: 预处理r_prime和b
     MSSshare_p_preprocess(0, party_id, PRGs, netio, &r_prime);
@@ -60,7 +46,7 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
             rx_list[i] = r_i;
         }
     }
-    encoded_msg rx_list_msg;
+
     if (party_id == 0) {
         ShareValue rx_hat = (x.v1 + x.v2) & (x.MASK >> 1);
         // 第0个值是最高位，第ell-2个值是最低位
@@ -69,20 +55,13 @@ void PI_sign_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP 
             rx_hat_bits[i] = (rx_hat >> (ell - 2 - i)) & 1;
             rx_hat_bits[i] = rx_hat_bits[i] ^ 1; // 取反
             rx_hat_bits[i] = (rx_hat_bits[i] - rx_list[i] + p) % p;
-            rx_list_msg.add_msg((char *)&rx_hat_bits[i], bitp);
+            netio.store_data(2, &rx_hat_bits[i], bytep);
         }
-        std::vector<char> tmp(rx_list_msg.get_bytelen());
-        rx_list_msg.to_char_array(tmp.data());
-        netio.store_data(2, tmp.data(), rx_list_msg.get_bytelen());
         // need to send later
     } else if (party_id == 2) {
-        int bytelen = ((ell - 1) * bitp + 7) / 8;
-        std::vector<char> tmp(bytelen);
-        netio.recv_data(0, tmp.data(), bytelen);
-        rx_list_msg.from_char_array(tmp.data(), bytelen);
         for (int i = 0; i < ell - 1; i++) {
             ShareValue r_i = 0;
-            rx_list_msg.read_msg((char *)&r_i, bitp);
+            netio.recv_data(0, &r_i, bytep);
             rx_list[i] = r_i;
         }
     }
@@ -138,22 +117,8 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     ShareValue &Gamma = intermediate.Gamma;
     std::vector<ShareValue> &rx_list = intermediate.rx_list;
     ShareValue p = intermediate.p;
-
-    ShareValue MASK_p = 1;
-    int bitp = 1;
-    while (MASK_p + 1 < p) {
-        MASK_p = (MASK_p << 1) | 1;
-        bitp++;
-    }
-    int bytep = (bitp + 7) / 8;
-
-    ShareValue MASK_k = 1;
-    int bitk = 1;
-    while (MASK_k + 1 < k) {
-        MASK_k = (MASK_k << 1) | 1;
-        bitk++;
-    }
-    int bytek = (bitk + 7) / 8;
+    int bytep = byte_of(p);
+    int bytek = byte_of(k);
 
     // Step 0: P2将Gamma发送给P1
     if (party_id == 2) {
@@ -216,38 +181,22 @@ void PI_sign(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
         apply_permutation(pi, encode_list.data());
 
         // Step 5:把结果发送给P0
-        encoded_msg msg;
         for (int i = 0; i < ell; i++) {
-            msg.add_msg((char *)&encode_list[i], bitp);
+            netio.store_data(0, &encode_list[i], bytep);
         }
-        std::vector<char> tmp(msg.get_bytelen());
-        msg.to_char_array(tmp.data());
-        netio.send_data(0, tmp.data(), msg.get_bytelen());
+        netio.send_stored_data(0);
     }
 
     if (party_id == 0) {
         // Step 6: P0接收并解码encode_list
-        int bytelen = (ell * bitp + 7) / 8;
-
-        encoded_msg msg1;
-        std::vector<char> tmp1(bytelen);
-        netio.recv_data(1, tmp1.data(), bytelen);
-        msg1.from_char_array(tmp1.data(), bytelen);
-
-        encoded_msg msg2;
-        std::vector<char> tmp2(bytelen);
-        netio.recv_data(2, tmp2.data(), bytelen);
-        msg2.from_char_array(tmp2.data(), bytelen);
-
         std::vector<ShareValue> encode_list(ell);
         for (int i = 0; i < ell; i++) {
-            ShareValue val = 0;
-            msg1.read_msg((char *)&val, bitp);
-            encode_list[i] = val;
+            encode_list[i] = 0;
+            netio.recv_data(1, &encode_list[i], bytep);
         }
         for (int i = 0; i < ell; i++) {
             ShareValue val = 0;
-            msg2.read_msg((char *)&val, bitp);
+            netio.recv_data(2, &val, bytep);
             encode_list[i] = (encode_list[i] + val) % p;
         }
 
@@ -320,75 +269,32 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
     ShareValue p[vec_size];
     int ell[vec_size];
     ShareValue k[vec_size];
+    int bytep[vec_size];
+    int bytek[vec_size];
     for (int i = 0; i < vec_size; i++) {
         p[i] = intermediate_vec[i]->p;
         ell[i] = intermediate_vec[i]->ell;
         k[i] = intermediate_vec[i]->k;
+        bytep[i] = byte_of(p[i]);
+        bytek[i] = byte_of(k[i]);
     }
-
-    ShareValue MASK_p[vec_size];
-    int bitp[vec_size];
-    int total_bitp = 0;
-    int total_bytep = 0;
-    ShareValue MASK_k[vec_size];
-    int bitk[vec_size];
-    int total_bitk = 0;
-    int total_bytek = 0;
-    for (int i = 0; i < vec_size; i++) {
-        ShareValue p = intermediate_vec[i]->p;
-        ShareValue k = intermediate_vec[i]->k;
-        MASK_p[i] = 1;
-        MASK_k[i] = 1;
-        bitp[i] = 1;
-        bitk[i] = 1;
-        while (MASK_p[i] + 1 < p) {
-            MASK_p[i] = (MASK_p[i] << 1) | 1;
-            bitp[i]++;
-        }
-        while (MASK_k[i] + 1 < k) {
-            MASK_k[i] = (MASK_k[i] << 1) | 1;
-            bitk[i]++;
-        }
-        total_bitp += bitp[i];
-        total_bitk += bitk[i];
-    }
-    total_bytep = (total_bitp + 7) / 8;
-    total_bytek = (total_bitk + 7) / 8;
 
     // Step 0: P2将Gamma发送给P1
-    encoded_msg msg1;
-    if (party_id == 1) {
-        std::vector<char> tmp1(total_bytek);
-        netio.recv_data(2, tmp1.data(), total_bytek);
-        msg1.from_char_array(tmp1.data(), total_bytek);
-    }
     for (size_t i = 0; i < vec_size; i++) {
-        MSSshare *input_x = input_x_vec[i];
-        PI_sign_intermediate &intermediate = *intermediate_vec[i];
-        MSSshare_p *output_b = output_b_vec[i];
-
-        MSSshare &x = *input_x;
-        MSSshare_p &b = *output_b;
-        MSSshare_p &r_prime = intermediate.r_prime;
-        bool &Delta = intermediate.Delta;
-        ShareValue &Gamma = intermediate.Gamma;
-        std::vector<ShareValue> &rx_list = intermediate.rx_list;
+        ShareValue &Gamma = intermediate_vec[i]->Gamma;
 
         if (party_id == 2) {
-            msg1.add_msg((char *)&Gamma, bitk[i]);
+            netio.store_data(1, (char *)&Gamma, bytek[i]);
         } else if (party_id == 1) {
             Gamma = 0;
-            msg1.read_msg((char *)&Gamma, bitk[i]);
+            netio.recv_data(2, (char *)&Gamma, bytek[i]);
         }
     }
     if (party_id == 2) {
-        std::vector<char> tmp1(total_bytek);
-        msg1.to_char_array(tmp1.data());
-        netio.send_data(1, tmp1.data(), total_bytek);
+        netio.send_stored_data(1);
     }
 
     if (party_id == 1 || party_id == 2) {
-        encoded_msg msg2;
         for (size_t idx = 0; idx < vec_size; idx++) {
             MSSshare *input_x = input_x_vec[idx];
             PI_sign_intermediate &intermediate = *intermediate_vec[idx];
@@ -454,36 +360,15 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
             apply_permutation(pi, encode_list.data());
 
             // Step 5:把结果发送给P0
-            encoded_msg msg;
             for (int i = 0; i < ell[idx]; i++) {
-                msg.add_msg((char *)&encode_list[i], bitp[idx]);
+                netio.store_data(0, (char *)&encode_list[i], bytep[idx]);
             }
-            msg2.add_msg(msg);
         }
-        std::vector<char> tmp2(msg2.get_bytelen());
-        msg2.to_char_array(tmp2.data());
-        netio.send_data(0, tmp2.data(), msg2.get_bytelen());
+        netio.send_stored_data(0);
     }
 
     if (party_id == 0) {
         // Step 6: P0接收并解码encode_list
-        int bytelen = 0;
-        for (size_t idx = 0; idx < vec_size; idx++) {
-            bytelen += ell[idx] * bitp[idx];
-        }
-        bytelen = (bytelen + 7) / 8;
-
-        encoded_msg msg2_1;
-        std::vector<char> tmp2_1(bytelen);
-        netio.recv_data(1, tmp2_1.data(), bytelen);
-        msg2_1.from_char_array(tmp2_1.data(), bytelen);
-
-        encoded_msg msg2_2;
-        std::vector<char> tmp2_2(bytelen);
-        netio.recv_data(2, tmp2_2.data(), bytelen);
-        msg2_2.from_char_array(tmp2_2.data(), bytelen);
-
-        encoded_msg msg3;
 
         for (size_t idx = 0; idx < vec_size; idx++) {
 
@@ -495,18 +380,15 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
             MSSshare_p &b = *output_b;
             MSSshare_p &r_prime = intermediate.r_prime;
             bool &Delta = intermediate.Delta;
-            ShareValue &Gamma = intermediate.Gamma;
-            std::vector<ShareValue> &rx_list = intermediate.rx_list;
 
             std::vector<ShareValue> encode_list(ell[idx]);
             for (int i = 0; i < ell[idx]; i++) {
-                ShareValue val = 0;
-                msg2_1.read_msg((char *)&val, bitp[idx]);
-                encode_list[i] = val;
+                encode_list[i] = 0;
+                netio.recv_data(1, (char *)&encode_list[i], bytep[idx]);
             }
             for (int i = 0; i < ell[idx]; i++) {
                 ShareValue val = 0;
-                msg2_2.read_msg((char *)&val, bitp[idx]);
+                netio.recv_data(2, (char *)&val, bytep[idx]);
                 encode_list[i] = (encode_list[i] + val) % p[idx];
             }
 
@@ -528,36 +410,24 @@ void PI_sign_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
             ShareValue masked_t = (t - r_prime.v1 - r_prime.v2 + 2 * k[idx]) % k[idx];
 
             // Step 8: 发送masked_t给P1和P2
-            msg3.add_msg((char *)&masked_t, bitk[idx]);
+            netio.store_data(1, (char *)&masked_t, bytek[idx]);
+            netio.store_data(2, (char *)&masked_t, bytek[idx]);
         }
-        std::vector<char> tmp3(msg3.get_bytelen());
-        msg3.to_char_array(tmp3.data());
-        netio.send_data(1, tmp3.data(), msg3.get_bytelen());
-        netio.send_data(2, tmp3.data(), msg3.get_bytelen());
+        netio.send_stored_data(1);
+        netio.send_stored_data(2);
     }
 
     if (party_id == 1 || party_id == 2) {
-        int bytelen = total_bytek;
-        encoded_msg msg3;
-        std::vector<char> tmp3(bytelen);
-        netio.recv_data(0, tmp3.data(), bytelen);
-        msg3.from_char_array(tmp3.data(), bytelen);
         for (size_t idx = 0; idx < vec_size; idx++) {
-
-            MSSshare *input_x = input_x_vec[idx];
             PI_sign_intermediate &intermediate = *intermediate_vec[idx];
             MSSshare_p *output_b = output_b_vec[idx];
-
-            MSSshare &x = *input_x;
             MSSshare_p &b = *output_b;
-            MSSshare_p &r_prime = intermediate.r_prime;
             bool &Delta = intermediate.Delta;
             ShareValue &Gamma = intermediate.Gamma;
-            std::vector<ShareValue> &rx_list = intermediate.rx_list;
 
             // Step 9: 接收masked_t并计算最终结果b
             ShareValue masked_t = 0;
-            msg3.read_msg((char *)&masked_t, bitk[idx]);
+            netio.recv_data(0, (char *)&masked_t, bytek[idx]);
             if (Delta) {
                 masked_t = k[idx] - masked_t;
             }

@@ -58,7 +58,11 @@ int main(int argc, char **argv) {
             // preprocess
             MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
             PI_sign_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &b_share);
-            if (party_id == 0 || party_id == 1) {
+            if (party_id == 0) {
+                netio->send_stored_data(1);
+                netio->send_stored_data(2);
+            }
+            if (party_id == 1) {
                 netio->send_stored_data(2);
             }
 
@@ -117,7 +121,11 @@ int main(int argc, char **argv) {
                 PI_sign_preprocess(party_id, PRGs, *netio, intermediate[j], &x_share[j],
                                    &b_share[j]);
             }
-            if (party_id == 0 || party_id == 1) {
+            if (party_id == 0) {
+                netio->send_stored_data(1);
+                netio->send_stored_data(2);
+            }
+            if (party_id == 1) {
                 netio->send_stored_data(2);
             }
 

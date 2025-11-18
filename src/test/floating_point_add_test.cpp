@@ -6,9 +6,9 @@
 
 const int BASE_PORT = 12345;
 const int NUM_PARTIES = 3;
-const int test_nums = 1000;
-const int lf = 23;
-const int le = 8;
+const int test_nums = 1;
+const int lf = 15;
+const int le = 6;
 
 using namespace std;
 
@@ -59,7 +59,11 @@ int main(int argc, char **argv) {
         PI_float_add_preprocess(party_id, PRGs, *netio, private_PRG, intermediate, &x_share,
                                 &y_share, &z_share);
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 
@@ -71,14 +75,14 @@ int main(int argc, char **argv) {
             private_PRG.gen_random_data(&x_t, sizeof(ShareValue));
             private_PRG.gen_random_data(&x_e, sizeof(ShareValue));
             x_b &= 1;
-            x_t &= ShareValue(1) << (lf + 1) - 1;
-            x_e &= ShareValue(1) << (le - 1) - 1;
+            x_t &= (ShareValue(1) << (lf + 1)) - 1;
+            x_e &= (ShareValue(1) << (le - 2)) - 1;
             private_PRG.gen_random_data(&y_b, sizeof(ShareValue));
             private_PRG.gen_random_data(&y_t, sizeof(ShareValue));
             private_PRG.gen_random_data(&y_e, sizeof(ShareValue));
             y_b &= 1;
-            y_t &= ShareValue(1) << (lf + 1) - 1;
-            y_e &= ShareValue(1) << (le - 1) - 1;
+            y_t &= (ShareValue(1) << (lf + 1)) - 1;
+            y_e &= (ShareValue(1) << (le - 2)) - 1;
 
             x_t |= (ShareValue(1) << lf);
             y_t |= (ShareValue(1) << lf);
@@ -95,5 +99,72 @@ int main(int argc, char **argv) {
         FLTplain x_recon = FLTshare_recon(party_id, *netio, &x_share);
         FLTplain y_recon = FLTshare_recon(party_id, *netio, &y_share);
         FLTplain z_recon = FLTshare_recon(party_id, *netio, &z_share);
+
+        // verify
+        if (party_id == 0) {
+            uint256_t x_value = x_t;
+            {
+                int tmp = x_e;
+                while (tmp > 0) {
+                    x_value = x_value << 1;
+                    tmp--;
+                }
+            }
+            uint256_t y_value = y_t;
+            {
+                int tmp = y_e;
+                while (tmp > 0) {
+                    y_value = y_value << 1;
+                    tmp--;
+                }
+            }
+            bool x_sign = x_b, y_sign = y_b;
+            if (x_value < y_value) {
+                swap(x_value, y_value);
+                swap(x_sign, y_sign);
+            }
+            if (x_sign == y_sign) {
+                x_value = x_value + y_value;
+            } else {
+                x_value = x_value - y_value;
+            }
+            bool z_b = x_sign;
+            uint256_t z_t = x_value;
+            int z_e = 0;
+            while (z_t >= (uint256_t(1) << (lf + 1))) {
+                z_t = z_t >> 1;
+                z_e++;
+            }
+
+            cout << endl << "Info of x:" << endl;
+            cout << "b        :" << x_b << endl;
+            cout << "t        :" << bitset<lf + 2>(x_t) << endl;
+            cout << "e        :" << bitset<le>(x_e) << endl;
+
+            cout << endl << "Reconstructed x:" << endl;
+            cout << "b        :" << x_recon.b << endl;
+            cout << "t        :" << bitset<lf + 2>(x_recon.t) << endl;
+            cout << "e        :" << bitset<le>(x_recon.e) << endl;
+
+            cout << endl << "Info of y:" << endl;
+            cout << "b        :" << y_b << endl;
+            cout << "t        :" << bitset<lf + 2>(y_t) << endl;
+            cout << "e        :" << bitset<le>(y_e) << endl;
+
+            cout << endl << "Reconstructed y:" << endl;
+            cout << "b        :" << y_recon.b << endl;
+            cout << "t        :" << bitset<lf + 2>(y_recon.t) << endl;
+            cout << "e        :" << bitset<le>(y_recon.e) << endl;
+
+            cout << endl << "Info of z:" << endl;
+            cout << "b        :" << z_b << endl;
+            cout << "t        :" << bitset<lf + 2>(z_t.convert_to<ShareValue>()) << endl;
+            cout << "e        :" << bitset<le>(z_e) << endl;
+
+            cout << endl << "Reconstructed z:" << endl;
+            cout << "b        :" << z_recon.b << endl;
+            cout << "t        :" << bitset<lf + 2>(z_recon.t) << endl;
+            cout << "e        :" << bitset<le>(z_recon.e) << endl;
+        }
     }
 }

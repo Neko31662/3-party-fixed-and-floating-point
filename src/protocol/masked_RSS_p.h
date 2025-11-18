@@ -94,13 +94,6 @@ class MSSshare_p_mul_res : public MSSshare_p {
 // ======================= implementation ========================
 // ===============================================================
 
-/* 重构MSSshare_p对象，返回重构后的秘密值
- * @param party_id: 参与方id，0/1/2
- * @param netio: 多方通信接口
- * @param s: 待重构的MSSshare_p对象指针
- */
-inline ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s);
-
 /* 预处理MSSshare_p对象
  * @param secret_holder_id: 秘密值持有方id，0/1,2，如果该对象之后不进行share_from，必须传入0
  * @param party_id: 参与方id，0/1/2
@@ -175,4 +168,12 @@ inline void MSSshare_p_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
                                             std::vector<MSSshare_p *> &s1_vec,
                                             std::vector<MSSshare_p *> &s2_vec);
 
+/* 重构MSSshare_p对象，返回重构后的秘密值
+ * @param party_id: 参与方id，0/1/2
+ * @param netio: 多方通信接口
+ * @param s: 待重构的MSSshare_p对象指针
+ */
+inline ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s);
+
+inline std::vector<ShareValue> MSSshare_p_recon_vec(const int party_id, NetIOMP &netio, std::vector<MSSshare_p *> &s);
 #include "protocol/masked_RSS_p.tpp"

@@ -1,5 +1,10 @@
 
 ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s) {
+#ifdef DEBUG_MODE
+    if (!s->has_shared) {
+        error("MSSshare_p_recon requires the input to have been shared");
+    }
+#endif
     ShareValue total(0);
     if (party_id == 0) {
         netio.send_data(1, &s->v2, s->BYTELEN);
@@ -7,14 +12,47 @@ ShareValue MSSshare_p_recon(const int party_id, NetIOMP &netio, MSSshare_p *s) {
 
         netio.recv_data(1, &total, s->BYTELEN);
     } else if (party_id == 1) {
-        netio.recv_data(0, &total, s->BYTELEN);
         netio.send_data(0, &s->v1, s->BYTELEN);
+        netio.recv_data(0, &total, s->BYTELEN);
 
     } else if (party_id == 2) {
         netio.recv_data(0, &total, s->BYTELEN);
     }
     total = (total + s->v1 + s->v2) % s->p;
     return total;
+}
+
+inline std::vector<ShareValue> MSSshare_p_recon_vec(const int party_id, NetIOMP &netio, std::vector<MSSshare_p *> &s) {
+#ifdef DEBUG_MODE
+    for (size_t i = 0; i < s.size(); i++) {
+        if (!s[i]->has_shared) {
+            error("MSSshare_p_recon_vec requires the input to have been shared");
+        }
+    }
+#endif
+    int len = s.size();
+    std::vector<ShareValue> result(len);
+    for (int i = 0; i < len; i++) {
+        if (party_id == 0) {
+            netio.store_data(1, &s[i]->v2, s[i]->BYTELEN);
+            netio.store_data(2, &s[i]->v1, s[i]->BYTELEN);
+        } else if (party_id == 1) {
+            netio.store_data(0, &s[i]->v1, s[i]->BYTELEN);
+        }
+    }
+    netio.send_stored_data_all();
+    for (int i = 0; i < len; i++) {
+        ShareValue total(0);
+        if (party_id == 0) {
+            netio.recv_data(1, &total, s[i]->BYTELEN);
+        } else if (party_id == 1) {
+            netio.recv_data(0, &total, s[i]->BYTELEN);
+        } else if (party_id == 2) {
+            netio.recv_data(0, &total, s[i]->BYTELEN);
+        }
+        result[i] = (total + s[i]->v1 + s[i]->v2) % s[i]->p;
+    }
+    return result;
 }
 
 void MSSshare_p_preprocess(const int secret_holder_id, const int party_id,
@@ -98,7 +136,7 @@ void MSSshare_p_share_from_store(const int party_id, NetIOMP &netio, MSSshare_p 
         m = (m - s->v1 + s->p) % s->p;
         m = (m - s->v2 + s->p) % s->p;
         // send m = x - r1 - r2
-        netio.send_data(1, &m, s->BYTELEN); // P0向P1发送的不store
+        netio.store_data(1, &m, s->BYTELEN);
         netio.store_data(2, &m, s->BYTELEN);
     } else {
         s->v1 = 0;
@@ -246,9 +284,10 @@ inline void MSSshare_p_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
         }
         temp %= res->p;
 
-        netio.send_data(3 - party_id, &temp, res->BYTELEN);
+        netio.store_data(3 - party_id, &temp, res->BYTELEN);
         res->v1 = temp % res->p;
     }
+    netio.send_stored_data(3 - party_id);
 
     for (int i = 0; i < vec_len; i++) {
         auto &res = res_vec[i];

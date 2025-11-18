@@ -11,7 +11,7 @@ const int NUM_PARTIES = 3;
 const int ell = 50;
 
 const int len = 10;
-uint64_t secret[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+ShareValue secret[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 int main(int argc, char **argv) {
     // net io

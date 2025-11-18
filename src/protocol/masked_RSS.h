@@ -31,6 +31,32 @@ class MSSshare {
     virtual ~MSSshare() = default;
     MSSshare &operator=(const ShareValue &) = delete;
 
+    MSSshare &operator=(const MSSshare &other) {
+#ifdef DEBUG_MODE
+        if (this->BITLEN != other.BITLEN) {
+            error("MSSshare operator=: bit-length mismatch");
+        }
+        this->has_preprocess = other.has_preprocess;
+        this->has_shared = other.has_shared;
+#endif
+        this->v1 = other.v1;
+        this->v2 = other.v2;
+        return *this;
+    }
+
+    MSSshare &operator=(const MSSshare_p &other) {
+#ifdef DEBUG_MODE
+        if (other.p != this->MASK + 1) {
+            error("MSSshare operator=: modulus mismatch");
+        }
+        this->has_preprocess = other.has_preprocess;
+        this->has_shared = other.has_shared;
+#endif
+        this->v1 = other.v1;
+        this->v2 = other.v2;
+        return *this;
+    }
+
     MSSshare operator+(const MSSshare &other) const noexcept {
 #ifdef DEBUG_MODE
         if (this->BITLEN != other.BITLEN) {
@@ -74,18 +100,21 @@ class MSSshare_mul_res : public MSSshare {
     MSSshare_mul_res(int ell) : MSSshare(ell) {}
     virtual ~MSSshare_mul_res() = default;
     MSSshare_mul_res &operator=(const ShareValue &) = delete;
+
+    MSSshare_mul_res &operator=(const MSSshare_mul_res &other) {
+#ifdef DEBUG_MODE
+        if (this->BITLEN != other.BITLEN) {
+            error("MSSshare_mul_res operator=: bit-length mismatch");
+        }
+#endif
+        memcpy(this, &other, sizeof(MSSshare_mul_res));
+        return *this;
+    }
 };
 
 // ===============================================================
 // ======================= implementation ========================
 // ===============================================================
-
-/* 重构MSSshare对象，返回重构后的秘密值
- * @param party_id: 参与方id，0/1/2
- * @param netio: 多方通信接口
- * @param s: 待重构的MSSshare对象指针
- */
-inline ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare *s);
 
 /* 预处理MSSshare对象
  * @param secret_holder_id: 秘密值持有方id，0/1,2，如果该对象之后不进行share_from，必须传入0
@@ -154,7 +183,12 @@ inline void MSSshare_mul_res_calc_mul_vec(const int party_id, NetIOMP &netio,
                                           std::vector<MSSshare *> &s1_vec,
                                           std::vector<MSSshare *> &s2_vec);
 
-inline void MSSshare_from_p(MSSshare *to, MSSshare_p *from);
+/* 重构MSSshare对象，返回重构后的秘密值
+ * @param party_id: 参与方id，0/1/2
+ * @param netio: 多方通信接口
+ * @param s: 待重构的MSSshare对象指针
+ */
+inline ShareValue MSSshare_recon(const int party_id, NetIOMP &netio, MSSshare *s);
 
-inline void MSSshare_mul_res_from_p(MSSshare_mul_res *to, MSSshare_p_mul_res *from);
+inline std::vector<ShareValue> MSSshare_recon_vec(const int party_id, NetIOMP &netio, std::vector<MSSshare *> &s);
 #include "protocol/masked_RSS.tpp"

@@ -19,7 +19,7 @@ struct PI_select_intermediate {
 };
 
 /*b=1选择x，反之选择y
-*/
+ */
 void PI_select_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                           PI_select_intermediate &intermediate, MSSshare *input_x,
                           MSSshare *input_y, MSSshare *input_b, MSSshare *output_z);

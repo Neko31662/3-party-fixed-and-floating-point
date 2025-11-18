@@ -31,6 +31,7 @@ struct PI_fixed_mult_intermediate {
         this->lf = lf;
         this->l_res = l_res;
         l_input = li + lf;
+#ifdef DEBUG_MODE
         if (li <= 0 || lf <= 0 || l_res <= 0) {
             error("PI_fixed_mult_intermediate: li,lf and l_res must be positive integers");
         }
@@ -40,6 +41,7 @@ struct PI_fixed_mult_intermediate {
         if (li + lf < 2) {
             error("PI_fixed_mult_intermediate: li + lf must be at least 2");
         }
+#endif
     }
 };
 

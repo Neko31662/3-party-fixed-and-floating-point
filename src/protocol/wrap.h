@@ -126,4 +126,22 @@ void PI_wrap1(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
  */
 void PI_wrap2(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
               PI_wrap2_intermediate &intermediate, MSSshare *input_x, MSSshare_p *output_z);
+
+void PI_wrap1_spec_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                       std::vector<PI_wrap1_spec_intermediate *> &intermediate_vec,
+                       std::vector<MSSshare *> &input_x_vec,
+                       std::vector<MSSshare_p *> &output_z_vec);
+
+void PI_wrap2_spec_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                       std::vector<PI_wrap2_spec_intermediate *> &intermediate_vec,
+                       std::vector<MSSshare *> &input_x_vec,
+                       std::vector<MSSshare_p *> &output_z_vec);
+
+void PI_wrap1_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                  std::vector<PI_wrap1_intermediate *> &intermediate_vec,
+                  std::vector<MSSshare *> &input_x_vec, std::vector<MSSshare_p *> &output_z_vec);
+
+void PI_wrap2_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                  std::vector<PI_wrap2_intermediate *> &intermediate_vec,
+                  std::vector<MSSshare *> &input_x_vec, std::vector<MSSshare_p *> &output_z_vec);
 #include "protocol/wrap.tpp"

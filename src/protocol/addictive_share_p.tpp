@@ -124,19 +124,12 @@ void ADDshare_p_mul_res_cal_mult(const int party_id, NetIOMP &netio, ADDshare_p_
 
     // P1和P2重构d和e，P0不参与
     ShareValue d_sum = 0, e_sum = 0;
-    if (party_id == 1) {
-        netio.send_data(2, &d, res->BYTELEN);
-        netio.send_data(2, &e, res->BYTELEN);
+    netio.send_data(3 - party_id, &d, res->BYTELEN);
+    netio.send_data(3 - party_id, &e, res->BYTELEN);
 
-        netio.recv_data(2, &d_sum, res->BYTELEN);
-        netio.recv_data(2, &e_sum, res->BYTELEN);
-    } else if (party_id == 2) {
-        netio.recv_data(1, &d_sum, res->BYTELEN);
-        netio.recv_data(1, &e_sum, res->BYTELEN);
+    netio.recv_data(3 - party_id, &d_sum, res->BYTELEN);
+    netio.recv_data(3 - party_id, &e_sum, res->BYTELEN);
 
-        netio.send_data(1, &d, res->BYTELEN);
-        netio.send_data(1, &e, res->BYTELEN);
-    }
     d_sum = (d_sum + d) % res->p;
     e_sum = (e_sum + e) % res->p;
 
@@ -156,15 +149,35 @@ ShareValue ADDshare_p_recon(const int party_id, NetIOMP &netio, ADDshare_p *s) {
         return 0;
     }
     ShareValue total = 0;
-    if (party_id == 1) {
-        netio.send_data(2, &s->v, s->BYTELEN);
-        netio.recv_data(2, &total, s->BYTELEN);
-    } else if (party_id == 2) {
-        netio.recv_data(1, &total, s->BYTELEN);
-        netio.send_data(1, &s->v, s->BYTELEN);
-    }
+    netio.send_data(3 - party_id, &s->v, s->BYTELEN);
+    netio.recv_data(3 - party_id, &total, s->BYTELEN);
     total = (total + s->v) % s->p;
     return total;
+}
+
+inline std::vector<ShareValue> ADDshare_p_recon_vec(const int party_id, NetIOMP &netio, std::vector<ADDshare_p *> &s) {
+#ifdef DEBUG_MODE
+    for (size_t i = 0; i < s.size(); i++) {
+        if (!s[i]->has_shared) {
+            error("ADDshare_p_recon_vec requires the input to have been shared");
+        }
+    }
+#endif
+    if (party_id == 0) {
+        return std::vector<ShareValue>(s.size(), 0);
+    }
+    int len = s.size();
+    std::vector<ShareValue> result(len);
+    for (int i = 0; i < len; i++) {
+        netio.store_data(3 - party_id, &s[i]->v, s[i]->BYTELEN);
+    }
+    netio.send_stored_data(3 - party_id);
+    for (int i = 0; i < len; i++) {
+        ShareValue tmp = 0;
+        netio.recv_data(3 - party_id, &tmp, s[i]->BYTELEN);
+        result[i] = (tmp + s[i]->v) % s[i]->p;
+    }
+    return result;
 }
 
 void ADDshare_p_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
@@ -199,29 +212,16 @@ void ADDshare_p_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
     std::vector<ShareValue> d_sum(len), e_sum(len);
 
     // 发送和接收信息
-    encoded_msg msg1, msg2;
     for (int i = 0; i < len; i++) {
-        msg1.add_msg((char *)&d[i], res[0]->BITLEN);
-        msg1.add_msg((char *)&e[i], res[0]->BITLEN);
+        netio.store_data(3 - party_id, &d[i], res[i]->BYTELEN);
+        netio.store_data(3 - party_id, &e[i], res[i]->BYTELEN);
     }
+    netio.send_stored_data(3 - party_id);
 
-    std::vector<char> buffer(msg1.get_bytelen());
-    std::vector<char> buffer_recv(msg1.get_bytelen());
-    msg1.to_char_array(buffer.data());
-
-    if (party_id == 1) {
-        netio.send_data(2, buffer.data(), buffer.size());
-        netio.recv_data(2, buffer_recv.data(), buffer.size());
-    } else if (party_id == 2) {
-        netio.recv_data(1, buffer_recv.data(), buffer.size());
-        netio.send_data(1, buffer.data(), buffer.size());
-    }
-
-    msg2.from_char_array(buffer_recv.data(), buffer_recv.size());
     for (int i = 0; i < len; i++) {
         ShareValue tmp_d = 0, tmp_e = 0;
-        msg2.read_msg((char *)&tmp_d, res[0]->BITLEN);
-        msg2.read_msg((char *)&tmp_e, res[0]->BITLEN);
+        netio.recv_data(3 - party_id, &tmp_d, res[i]->BYTELEN);
+        netio.recv_data(3 - party_id, &tmp_e, res[i]->BYTELEN);
         d_sum[i] = (tmp_d + d[i]) % res[i]->p;
         e_sum[i] = (tmp_e + e[i]) % res[i]->p;
 

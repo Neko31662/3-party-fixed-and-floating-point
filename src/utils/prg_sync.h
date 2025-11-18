@@ -36,9 +36,9 @@ class PRGSync {
     PRG prg;
 
   public:
-    const uint BATCH_SIZE = 1 << 5;
-    const uint POOL_SIZE = BATCH_SIZE << 5;
-    const uint INDEX_MASK = POOL_SIZE - 1;
+    static const uint BATCH_SIZE = 1 << 5;
+    static const uint POOL_SIZE = BATCH_SIZE << 5;
+    static const uint INDEX_MASK = POOL_SIZE - 1;
 
     int cnt = 0;
     int cnt_prefetch = 0;
@@ -73,5 +73,4 @@ class PRGSync {
         }
         return start;
     }
-
 };

@@ -20,8 +20,11 @@ void PI_convert_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIO
 
 /*将2^ell上的ADDshare分享转换为模k的MSSshare_p分享，要求input_x对应的明文最高位是0
  */
-
 void PI_convert(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
                 PI_convert_intermediate &intermediate, ADDshare<> *input_x, MSSshare_p *output_z);
 
+void PI_convert_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                    std::vector<PI_convert_intermediate *> &intermediate_vec,
+                    std::vector<ADDshare<> *> &input_x_vec,
+                    std::vector<MSSshare_p *> &output_z_vec);
 #include "protocol/convert.tpp"

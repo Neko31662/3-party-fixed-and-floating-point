@@ -112,19 +112,11 @@ void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio, ADDshare_mul_
 
     // P1和P2重构d和e，P0不参与
     ShareType d_sum, e_sum;
-    if (party_id == 1) {
-        netio.send_data(2, &d, res->BYTELEN);
-        netio.send_data(2, &e, res->BYTELEN);
+    netio.send_data(3 - party_id, &d, res->BYTELEN);
+    netio.send_data(3 - party_id, &e, res->BYTELEN);
 
-        netio.recv_data(2, &d_sum, res->BYTELEN);
-        netio.recv_data(2, &e_sum, res->BYTELEN);
-    } else if (party_id == 2) {
-        netio.recv_data(1, &d_sum, res->BYTELEN);
-        netio.recv_data(1, &e_sum, res->BYTELEN);
-
-        netio.send_data(1, &d, res->BYTELEN);
-        netio.send_data(1, &e, res->BYTELEN);
-    }
+    netio.recv_data(3 - party_id, &d_sum, res->BYTELEN);
+    netio.recv_data(3 - party_id, &e_sum, res->BYTELEN);
     d_sum = (d_sum + d) & res->MASK;
     e_sum = (e_sum + e) & res->MASK;
 
@@ -148,13 +140,15 @@ void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
         if (!s1[i]->has_shared || !s2[i]->has_shared) {
             error("ADDshare_mul_res_cal_mult_vec requires both inputs to have been shared");
         }
+        if (s1[i]->BITLEN != res[i]->BITLEN || s2[i]->BITLEN != res[i]->BITLEN) {
+            error("ADDshare_mul_res_cal_mult_vec: bitlength mismatch between inputs and result");
+        }
         res[i]->has_shared = true;
     }
 #endif
     if (party_id == 0) {
         return;
     }
-    int ell = res[0]->BITLEN;
 
     std::vector<ShareType> d(len), e(len);
     for (int i = 0; i < len; i++) {
@@ -164,27 +158,16 @@ void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
     std::vector<ShareType> d_sum(len), e_sum(len);
 
     // 发送和接收信息
-    encoded_msg msg1, msg2;
     for (int i = 0; i < len; i++) {
-        msg1.add_msg((char *)&d[i], ell);
-        msg1.add_msg((char *)&e[i], ell);
+        netio.store_data(3 - party_id, &d[i], s1[i]->BYTELEN);
+        netio.store_data(3 - party_id, &e[i], s2[i]->BYTELEN);
     }
-    std::vector<char> buffer(msg1.get_bytelen());
-    std::vector<char> buffer_recv(msg1.get_bytelen());
-    msg1.to_char_array(buffer.data());
+    netio.send_stored_data(3 - party_id);
 
-    if (party_id == 1) {
-        netio.send_data(2, buffer.data(), buffer.size());
-        netio.recv_data(2, buffer_recv.data(), buffer.size());
-    } else if (party_id == 2) {
-        netio.recv_data(1, buffer_recv.data(), buffer.size());
-        netio.send_data(1, buffer.data(), buffer.size());
-    }
-    msg2.from_char_array(buffer_recv.data(), buffer_recv.size());
     for (int i = 0; i < len; i++) {
         ShareType tmp_d, tmp_e;
-        msg2.read_msg((char *)&tmp_d, ell);
-        msg2.read_msg((char *)&tmp_e, ell);
+        netio.recv_data(3 - party_id, &tmp_d, s1[i]->BYTELEN);
+        netio.recv_data(3 - party_id, &tmp_e, s2[i]->BYTELEN);
         d_sum[i] = (tmp_d + d[i]) & res[i]->MASK;
         e_sum[i] = (tmp_e + e[i]) & res[i]->MASK;
 
@@ -206,39 +189,35 @@ ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ShareType>
         return 0;
     }
     ShareType total;
-    if (party_id == 1) {
-        netio.send_data(2, &s->v, s->BYTELEN);
-        netio.recv_data(2, &total, s->BYTELEN);
-    } else if (party_id == 2) {
-        netio.recv_data(1, &total, s->BYTELEN);
-        netio.send_data(1, &s->v, s->BYTELEN);
-    }
+    netio.send_data(3 - party_id, &s->v, s->BYTELEN);
+    netio.recv_data(3 - party_id, &total, s->BYTELEN);
     total = (total + s->v) & s->MASK;
     return total;
 }
 
 template <typename ShareType>
-inline void ADDshare_from_p(ADDshare<ShareType> *to, ADDshare_p *from) {
+inline std::vector<ShareType> ADDshare_recon_vec(const int party_id, NetIOMP &netio,
+                                    std::vector<ADDshare<ShareType> *> &s) {
 #ifdef DEBUG_MODE
-    if (from->p != to->MASK + 1) {
-        error("ADDshare_from_p: modulus mismatch");
+    for (size_t i = 0; i < s.size(); i++) {
+        if (!s[i]->has_shared) {
+            error("ADDshare_recon_vec requires the input to have been shared");
+        }
     }
-    to->has_shared = from->has_shared;
 #endif
-    to->v = from->v;
-}
-
-template <typename ShareType>
-inline void ADDshare_mul_res_from_p(ADDshare_mul_res<ShareType> *to, ADDshare_p_mul_res *from) {
-#ifdef DEBUG_MODE
-    if (from->p != to->MASK + 1) {
-        error("ADDshare_mul_res_from_p: modulus mismatch");
+    if (party_id == 0) {
+        return std::vector<ShareType>(s.size(), 0);
     }
-    to->has_preprocess = from->has_preprocess;
-    to->has_shared = from->has_shared;
-#endif
-    to->v = from->v;
-    to->x = from->x;
-    to->y = from->y;
-    to->z = from->z;
+    int len = s.size();
+    std::vector<ShareType> result(len);
+    for (int i = 0; i < len; i++) {
+        netio.store_data(3 - party_id, &s[i]->v, s[i]->BYTELEN);
+    }
+    netio.send_stored_data(3 - party_id);
+    for (int i = 0; i < len; i++) {
+        ShareType tmp;
+        netio.recv_data(3 - party_id, &tmp, s[i]->BYTELEN);
+        result[i] = (tmp + s[i]->v) & s[i]->MASK;
+    }
+    return result;
 }

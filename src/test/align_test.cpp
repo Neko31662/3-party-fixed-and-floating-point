@@ -9,6 +9,7 @@ const int NUM_PARTIES = 3;
 const int test_nums = 1000;
 const int ell = 32;
 const int ell2 = 16;
+const int vec_len = 10;
 
 using namespace std;
 
@@ -45,10 +46,13 @@ int main(int argc, char **argv) {
         MSSshare_mul_res zeta_share(ell2);
         // preprocess
         MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share);
-        PI_align_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &z_share,
-                                       &zeta_share);
+        PI_align_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &z_share, &zeta_share);
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 
@@ -107,6 +111,98 @@ int main(int argc, char **argv) {
         }
     }
     cout << "PI_align test passed!" << endl;
+
+    // 向量
+    for (int test_i = 0; test_i < max(1, test_nums / vec_len); test_i++) {
+        vector<PI_align_intermediate> intermediate_vec(vec_len, PI_align_intermediate(ell, ell2));
+        vector<MSSshare> x_share_vec(vec_len, MSSshare(ell));
+        vector<MSSshare> z_share_vec(vec_len, MSSshare(ell));
+        vector<MSSshare_mul_res> zeta_share_vec(vec_len, MSSshare_mul_res(ell2));
+        // preprocess
+        for (int i = 0; i < vec_len; i++) {
+            MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share_vec[i]);
+            PI_align_preprocess(party_id, PRGs, *netio, intermediate_vec[i], &x_share_vec[i],
+                                &z_share_vec[i], &zeta_share_vec[i]);
+        }
+
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
+            netio->send_stored_data(2);
+        }
+
+        // share
+        ShareValue test_value;
+        if (party_id == 0) {
+            private_PRG.gen_random_data(&test_value, sizeof(ShareValue));
+            test_value &= (ShareValue(1) << ell) - 1;
+            ShareValue tmp;
+            private_PRG.gen_random_data(&tmp, sizeof(ShareValue));
+            tmp %= ell;
+            // test_value >>= tmp;
+        }
+        for (int i = 0; i < vec_len; i++) {
+            MSSshare_share_from(0, party_id, *netio, &x_share_vec[i], test_value);
+        }
+
+        // test
+        auto intermediate_ptr = make_ptr_vec(intermediate_vec);
+        auto x_share_ptr = make_ptr_vec(x_share_vec);
+        auto z_share_ptr = make_ptr_vec(z_share_vec);
+        auto zeta_share_ptr = make_ptr_vec(zeta_share_vec);
+        PI_align_vec(party_id, PRGs, *netio, intermediate_ptr, x_share_ptr, z_share_ptr,
+                     zeta_share_ptr);
+
+        // reconstruct
+        for (int idx = 0; idx < vec_len; idx++) {
+            auto &intermediate = intermediate_vec[idx];
+            auto &x_share = x_share_vec[idx];
+            auto &z_share = z_share_vec[idx];
+            auto &zeta_share = zeta_share_vec[idx];
+
+            ShareValue z_recon = 0;
+            z_recon = MSSshare_recon(party_id, *netio, &z_share);
+            ShareValue zeta_recon = 0;
+            zeta_recon = MSSshare_recon(party_id, *netio, &zeta_share);
+
+            // check
+            if (party_id == 0) {
+                netio->send_data(1, &test_value, sizeof(ShareValue));
+                netio->send_data(2, &test_value, sizeof(ShareValue));
+            } else {
+                netio->recv_data(0, &test_value, sizeof(ShareValue));
+            }
+            ShareValue expected_z = test_value;
+            int expected_zeta = 0;
+            if (test_value != 0) {
+                while (expected_z < (ShareValue(1) << ell)) {
+                    expected_zeta += 1;
+                    expected_z <<= 1;
+                }
+                expected_zeta -= 1;
+                expected_z >>= 1;
+            }
+
+            if (z_recon != expected_z || zeta_recon != expected_zeta) {
+                cout << "PI_align test failed at index " << test_i << endl;
+                cout << "At vector index " << idx << endl;
+                myout.show();
+                cout << "x_share.v1: " << bitset<ell>(x_share.v1) << endl;
+                cout << "x_share.v2: " << bitset<ell>(x_share.v2) << endl;
+                cout << "test_value: " << bitset<ell>(test_value) << endl;
+                cout << "z_recon: " << bitset<ell>(z_recon) << endl;
+                cout << "zeta_recon: " << zeta_recon << endl;
+                cout << "expected_z: " << bitset<ell>(expected_z) << endl;
+                cout << "expected_zeta: " << expected_zeta << endl;
+                exit(1);
+            } else {
+                myout.clear_buffer();
+            }
+        }
+    }
+    cout << "PI_align_vec test passed!" << endl;
     delete netio;
     return 0;
 }

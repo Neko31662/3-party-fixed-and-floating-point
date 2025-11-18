@@ -11,6 +11,7 @@ const int NUM_PARTIES = 3;
 const int ell = 64;
 const ShareValue p2 = 3 + (ShareValue(1) << 28);
 const int test_nums = 1000;
+const int vec_len = 10;
 
 int main(int argc, char **argv) {
     // net io
@@ -38,7 +39,7 @@ int main(int argc, char **argv) {
     auto private_seed = gen_seed();
     auto private_PRG = PRGSync(&private_seed);
 
-    for (int i = 0; i < test_nums; i++) {
+    for (int test_i = 0; test_i < test_nums; test_i++) {
         PI_convert_intermediate intermediate(p2);
         ADDshare<> x_share(ell);
         MSSshare_p z_share{p2};
@@ -50,7 +51,11 @@ int main(int argc, char **argv) {
 
         // preprocess
         PI_convert_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &z_share);
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 
@@ -69,10 +74,64 @@ int main(int argc, char **argv) {
             ShareValue expected = x_plain % p2;
             if (z_recon != expected) {
                 cout << "PI_convert test failed! expected: " << expected << ", got: " << z_recon
-                     << ", at test " << i << endl;
+                     << ", at test " << test_i << endl;
                 exit(1);
             }
         }
     }
     cout << "PI_convert test passed!" << std::endl;
+
+    for (int test_i = 0; test_i < max(1, test_nums / vec_len); test_i++) {
+        vector<PI_convert_intermediate> intermediate_vec(vec_len, p2);
+        vector<ADDshare<>> x_share_vec(vec_len, ell);
+        vector<MSSshare_p> z_share_vec(vec_len, p2);
+
+        ShareValue x_plain = 0;
+        private_PRG.gen_random_data(&x_plain, sizeof(ShareValue));
+        x_plain &= x_share_vec[0].MASK;
+        x_plain >>= 1; // 保证最高位是0
+
+        // preprocess
+        for (int i = 0; i < vec_len; i++) {
+            PI_convert_preprocess(party_id, PRGs, *netio, intermediate_vec[i], &x_share_vec[i],
+                                  &z_share_vec[i]);
+        }
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
+            netio->send_stored_data(2);
+        }
+
+        // share
+        for (int i = 0; i < vec_len; i++) {
+            ADDshare_share_from(0, party_id, PRGs, *netio, &x_share_vec[i], x_plain);
+        }
+        ShareValue x_recon = ADDshare_recon(party_id, *netio, &x_share_vec[0]);
+
+        // compute
+        auto intermediate_ptr = make_ptr_vec(intermediate_vec);
+        auto x_share_ptr = make_ptr_vec(x_share_vec);
+        auto z_share_ptr = make_ptr_vec(z_share_vec);
+        PI_convert_vec(party_id, PRGs, *netio, intermediate_ptr, x_share_ptr, z_share_ptr);
+
+        // reconstruct
+        for (int i = 0; i < vec_len; i++) {
+            ShareValue z_recon = MSSshare_p_recon(party_id, *netio, &z_share_vec[i]);
+
+            // verify
+            if (party_id == 0) {
+                ShareValue expected = x_plain % p2;
+                if (z_recon != expected) {
+                    cout << "PI_convert test failed! expected: " << expected << ", got: " << z_recon
+                         << ", at test " << test_i << endl;
+                    exit(1);
+                }
+            }
+        }
+    }
+    cout << "PI_convert_vec test passed!" << std::endl;
+
+    delete netio;
 }

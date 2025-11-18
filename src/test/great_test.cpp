@@ -49,7 +49,11 @@ int main(int argc, char **argv) {
         MSSshare_preprocess(0, party_id, PRGs, *netio, &y_share);
         PI_great_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &y_share, &b_share);
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 
@@ -125,7 +129,11 @@ int main(int argc, char **argv) {
             PI_great_preprocess(party_id, PRGs, *netio, inter, &x_s, &y_s, &b_s);
         }
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 

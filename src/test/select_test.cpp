@@ -53,7 +53,11 @@ int main(int argc, char **argv) {
         PI_select_preprocess(party_id, PRGs, *netio, intermediate, &x_share, &y_share, &b_share,
                              &z_share);
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 
@@ -128,7 +132,11 @@ int main(int argc, char **argv) {
                                  &y_share_vec[i], &b_share_vec[i], &z_share_vec[i]);
         }
 
-        if (party_id == 0 || party_id == 1) {
+        if (party_id == 0) {
+            netio->send_stored_data(1);
+            netio->send_stored_data(2);
+        }
+        if (party_id == 1) {
             netio->send_stored_data(2);
         }
 

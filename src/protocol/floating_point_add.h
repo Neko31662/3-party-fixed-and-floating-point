@@ -27,11 +27,11 @@ struct PI_float_add_intermediate {
 #endif
 
     // input: x.e , y.e; output: 1 bit c1
-    PI_great_intermediate great_inter1;
+    PI_sign_intermediate sign_inter1;
     // input: x.t , y.t; output: 1 bit c3
-    PI_great_intermediate great_inter2;
+    PI_sign_intermediate sign_inter2;
     // input: zeta1 , lf; output: 1 bit d
-    PI_great_intermediate great_inter3;
+    PI_great_intermediate great_inter1;
     // input: x.e , y.e; output: 1 bit c2
     PI_eq_intermediate eq_inter1;
     // 用于选择 {x,y} 和 {y,x}，得到 X 和 Y
@@ -66,7 +66,7 @@ struct PI_float_add_intermediate {
 
     PI_float_add_intermediate(int lf, int le)
         : // great_inter
-          great_inter1(le, 1 << 1), great_inter2(lf + 2, 1 << 1), great_inter3(le, 1 << 1),
+          sign_inter1(le, 1 << 1), sign_inter2(lf + 2, 1 << 1), great_inter1(le, 1 << 1),
           // eq_inter
           eq_inter1(le, 1 << 1),
           // select_FLT_inter
@@ -107,11 +107,16 @@ struct PI_float_add_intermediate {
 };
 
 void PI_float_add_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                                PRGSync private_PRG, PI_float_add_intermediate &intermediate,
-                                FLTshare *input_x, FLTshare *input_y, FLTshare *output_z);
+                             PRGSync private_PRG, PI_float_add_intermediate &intermediate,
+                             FLTshare *input_x, FLTshare *input_y, FLTshare *output_z);
 
 void PI_float_add(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                     PI_float_add_intermediate &intermediate, FLTshare *input_x,
-                     FLTshare *input_y, FLTshare *output_z);
+                  PI_float_add_intermediate &intermediate, FLTshare *input_x, FLTshare *input_y,
+                  FLTshare *output_z);
+
+void PI_float_add_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                  std::vector<PI_float_add_intermediate *> &intermediate_vec,
+                  std::vector<FLTshare *> &input_x_vec, std::vector<FLTshare *> &input_y_vec,
+                  std::vector<FLTshare *> &output_z_vec);
 
 #include "protocol/floating_point_add.tpp"

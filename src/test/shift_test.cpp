@@ -29,7 +29,8 @@ int main(int argc, char **argv) {
     }
     vector<PRGSync> PRGs = {PRGSync(&seed1), PRGSync(&seed2)};
 
-    for (int k = 0; k < 1; ++k) {
+    // 非向量
+    for (int k = 0; k < ell; ++k) {
         ShareValue plain_x = 24678;
 
         PI_shift_intermediate intermediate(ell);
@@ -63,4 +64,55 @@ int main(int argc, char **argv) {
             exit(-1);
         }
     }
+    cout << "PI_shift test passed!" << endl;
+
+    // 向量
+    for (int k = 0; k < ell; ++k) {
+        int vec_len = 10;
+        ShareValue plain_x = 24678;
+
+        vector<PI_shift_intermediate> intermediate(vec_len, ell);
+        vector<ADDshare<>> k_share(vec_len, LOG_1(ell));
+        vector<MSSshare> x_share(vec_len, ell);
+        vector<MSSshare_mul_res> output_res(vec_len, ell);
+
+        // preprocess
+        for (int i = 0; i < vec_len; i++) {
+            MSSshare_preprocess(0, party_id, PRGs, *netio, &x_share[i]);
+            PI_shift_preprocess(party_id, PRGs, *netio, intermediate[i], &x_share[i],
+                                &output_res[i]);
+        }
+        if (party_id == 0) {
+            netio->send_stored_data(2);
+        }
+
+        // share
+        ShareValue k_value = k;
+        for (int i = 0; i < vec_len; i++) {
+            ADDshare_share_from(0, party_id, PRGs, *netio, &k_share[i], k_value);
+            MSSshare_share_from(0, party_id, *netio, &x_share[i], plain_x);
+        }
+
+        // compute
+        auto intermediate_ptr = make_ptr_vec(intermediate);
+        auto x_share_ptr = make_ptr_vec(x_share);
+        auto k_share_ptr = make_ptr_vec(k_share);
+        auto output_res_ptr = make_ptr_vec(output_res);
+        PI_shift_vec(party_id, PRGs, *netio, intermediate_ptr, x_share_ptr, k_share_ptr,
+                     output_res_ptr);
+
+        // reveal
+        ShareValue result;
+        for (int i = 0; i < vec_len; i++) {
+            result = MSSshare_recon(party_id, *netio, &output_res[i]);
+            cout << "k = " << k << ", result = " << result << endl;
+            if (result != ((plain_x << k) & output_res[i].MASK)) {
+                cout << "Error in PI_shift_vec!" << endl;
+                cout << "Expected: " << ((plain_x << k) & output_res[i].MASK) << endl;
+                cout << "Actual: " << result << endl;
+                exit(-1);
+            }
+        }
+    }
+    cout << "PI_shift_vec test passed!" << endl;
 }

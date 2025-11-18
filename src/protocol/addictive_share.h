@@ -24,6 +24,17 @@ template <typename ShareType = ShareValue> class ADDshare {
                   std::to_string(sizeof(ShareType) * 8));
         }
     }
+
+    ADDshare &operator=(const ADDshare_p &other) {
+#ifdef DEBUG_MODE
+        if (other.p != MASK + 1) {
+            error("ADDshare operator=: modulus mismatch");
+        }
+        has_shared = other.has_shared;
+#endif
+        v = other.v;
+        return *this;
+    }
 };
 
 template <typename ShareType = ShareValue> class ADDshare_mul_res : public ADDshare<ShareType> {
@@ -92,14 +103,6 @@ inline void ADDshare_mul_res_cal_mult(const int party_id, NetIOMP &netio,
                                       ADDshare_mul_res<ShareType> *res, ADDshare<ShareType> *s1,
                                       ADDshare<ShareType> *s2);
 
-/* 重构ADDshare对象，返回重构后的秘密值，仅P1,P2参与重构
- * @param party_id: 参与方id，0/1/2
- * @param netio: 多方通信接口
- * @param s: 待重构的ADDshare对象指针
- */
-template <typename ShareType>
-inline ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ShareType> *s);
-
 /* ADDshare_mul_res_cal_mult的向量化版本
  * @param party_id: 参与方id，0/1/2
  * @param netio: 多方通信接口
@@ -113,9 +116,16 @@ inline void ADDshare_mul_res_cal_mult_vec(const int party_id, NetIOMP &netio,
                                           const std::vector<ADDshare<ShareType> *> &s1,
                                           const std::vector<ADDshare<ShareType> *> &s2);
 
+/* 重构ADDshare对象，返回重构后的秘密值，仅P1,P2参与重构
+ * @param party_id: 参与方id，0/1/2
+ * @param netio: 多方通信接口
+ * @param s: 待重构的ADDshare对象指针
+ */
 template <typename ShareType>
-inline void ADDshare_from_p(ADDshare<ShareType> *to, ADDshare_p *from);
+inline ShareType ADDshare_recon(const int party_id, NetIOMP &netio, ADDshare<ShareType> *s);
 
 template <typename ShareType>
-inline void ADDshare_mul_res_from_p(ADDshare_mul_res<ShareType> *to, ADDshare_p_mul_res *from);
+inline std::vector<ShareType> ADDshare_recon_vec(const int party_id, NetIOMP &netio,
+                                std::vector<ADDshare<ShareType> *> &s);
+
 #include "protocol/addictive_share.tpp"

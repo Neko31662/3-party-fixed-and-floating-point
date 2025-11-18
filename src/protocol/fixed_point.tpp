@@ -36,14 +36,9 @@ void PI_fixed_mult_preprocess(const int party_id, std::vector<PRGSync> &PRGs, Ne
 
     // Step 1: 将x和y视为lf + l_res位的分享
     MSSshare input_origin[2] = {x, y};
-    input_origin[0].v1 &= input_origin[0].MASK;
-    input_origin[0].v2 &= input_origin[0].MASK;
-    input_origin[1].v1 &= input_origin[1].MASK;
-    input_origin[1].v2 &= input_origin[1].MASK;
 
     // Step 2: Gamma += (r_x_1 + r_x_2) * (r_y_1 + r_y_2)
     if (party_id == 0) {
-        Gamma.v = 0;
         Gamma.v =
             (input_origin[0].v1 + input_origin[0].v2) * (input_origin[1].v1 + input_origin[1].v2);
         Gamma.v &= Gamma.MASK;
@@ -134,12 +129,11 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
 
     // Step 1: 如果有offset，将x和y的m加上2^(l-2)，之后视为lf + l_res位的分享
     MSSshare input_origin[2] = {x, y};
-    for (int i = 0; i < 2; i++) {
-        if (has_offset) {
-            input_origin[i].v1 += (ShareValue(1) << (l_input - 2));
-        }
-        input_origin[i].v1 &= input_origin[i].MASK;
-        input_origin[i].v2 &= input_origin[i].MASK;
+    if (has_offset) {
+        input_origin[0].v1 += (ShareValue(1) << (l_input - 2));
+        input_origin[0].v1 &= input_origin[0].MASK;
+        input_origin[1].v1 += (ShareValue(1) << (l_input - 2));
+        input_origin[1].v1 &= input_origin[1].MASK;
     }
 
     ADDshare<> mz_share(lf + l_res); // 结果的m值的分享
@@ -162,9 +156,7 @@ void PI_fixed_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
     }
 
     // Step 2.3: [m_z] += [ m_x*(r_y_1+r_y_2) + m_y*(r_x_1+r_x_2) ]
-    for (int i = 0; i < 2; i++) {
-        mz_share.v += input_origin[i].v1 * input_origin[1 - i].v2;
-    }
+    mz_share.v += input_origin[0].v1 * input_origin[1].v2 + input_origin[1].v1 * input_origin[0].v2;
 
     // Step 2.4: [m_z] -= [1-r_a(0)] * m_b * m_a(0) *2^l
     for (int i = 0; i < 2; i++) {
@@ -276,15 +268,17 @@ void PI_fixed_mult_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &
 
     int vec_size = input_x_vec.size();
     std::vector<ADDshare<>> mz_share2_vec;
-    for (int i = 0; i < vec_size; i++) {
-        PI_fixed_mult_intermediate &PI_fixed_mult_intermediate = *PI_fixed_mult_intermediate_vec[i];
-        int li = PI_fixed_mult_intermediate.li;
-        int lf = PI_fixed_mult_intermediate.lf;
-        int l_res = PI_fixed_mult_intermediate.l_res;
+    mz_share2_vec.reserve(vec_size);
+    for (int idx = 0; idx < vec_size; idx++) {
+        PI_fixed_mult_intermediate &PI_fixed_mult_intermediate =
+            *PI_fixed_mult_intermediate_vec[idx];
+        const int &li = PI_fixed_mult_intermediate.li;
+        const int &lf = PI_fixed_mult_intermediate.lf;
+        const int &l_res = PI_fixed_mult_intermediate.l_res;
         const int l_input = li + lf;
-        MSSshare &x = *input_x_vec[i];
-        MSSshare &y = *input_y_vec[i];
-        MSSshare &z = *output_z_vec[i];
+        MSSshare &x = *input_x_vec[idx];
+        MSSshare &y = *input_y_vec[idx];
+        MSSshare &z = *output_z_vec[idx];
         ADDshare<> &Gamma = PI_fixed_mult_intermediate.Gamma;
         ADDshare<> *lf_share1 = PI_fixed_mult_intermediate.lf_share1;
         ADDshare<> *lf_share2 = PI_fixed_mult_intermediate.lf_share2;
@@ -292,12 +286,11 @@ void PI_fixed_mult_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &
 
         // Step 1: 如果有offset，将x和y的m加上2^(l-2)，之后视为lf + l_res位的分享
         MSSshare input_origin[2] = {x, y};
-        for (int i = 0; i < 2; i++) {
-            if (has_offset) {
-                input_origin[i].v1 += (ShareValue(1) << (l_input - 2));
-            }
-            input_origin[i].v1 &= input_origin[i].MASK;
-            input_origin[i].v2 &= input_origin[i].MASK;
+        if (has_offset) {
+            input_origin[0].v1 += (ShareValue(1) << (l_input - 2));
+            input_origin[0].v1 &= input_origin[0].MASK;
+            input_origin[1].v1 += (ShareValue(1) << (l_input - 2));
+            input_origin[1].v1 &= input_origin[1].MASK;
         }
 
         ADDshare<> mz_share(lf + l_res); // 结果的m值的分享
@@ -320,9 +313,8 @@ void PI_fixed_mult_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &
         }
 
         // Step 2.3: [m_z] += [ m_x*(r_y_1+r_y_2) + m_y*(r_x_1+r_x_2) ]
-        for (int i = 0; i < 2; i++) {
-            mz_share.v += input_origin[i].v1 * input_origin[1 - i].v2;
-        }
+        mz_share.v +=
+            input_origin[0].v1 * input_origin[1].v2 + input_origin[1].v1 * input_origin[0].v2;
 
         // Step 2.4: [m_z] -= [1-r_a(0)] * m_b * m_a(0) *2^l
         for (int i = 0; i < 2; i++) {
@@ -390,33 +382,15 @@ void PI_fixed_mult_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &
         mz_share2_vec.push_back(mz_share2);
     }
 
-    encoded_msg msg, msg_recv;
-    int total_bitlen = 0;
-    int total_bytelen = 0;
     for (int i = 0; i < vec_size; i++) {
-        msg.add_msg((char *)&mz_share2_vec[i].v, mz_share2_vec[i].BITLEN);
-        total_bitlen += mz_share2_vec[i].BITLEN;
+        netio.store_data(3 - party_id, &mz_share2_vec[i].v, mz_share2_vec[i].BYTELEN);
     }
-    total_bytelen = (total_bitlen + 7) / 8;
-    std::vector<char> tmp(total_bytelen);
-    if(party_id == 1) {
-        msg.to_char_array(tmp.data());
-        netio.send_data(2, tmp.data(), total_bytelen);
+    netio.send_stored_data(3 - party_id);
 
-        netio.recv_data(2, tmp.data(), total_bytelen);
-        msg_recv.from_char_array(tmp.data(), total_bytelen);
-    } else if(party_id == 2) {
-        netio.recv_data(1, tmp.data(), total_bytelen);
-        msg_recv.from_char_array(tmp.data(), total_bytelen);
-
-        msg.to_char_array(tmp.data());
-        netio.send_data(1, tmp.data(), total_bytelen);
-    }
     for (int i = 0; i < vec_size; i++) {
         MSSshare &z = *output_z_vec[i];
         ADDshare<> &mz_share2 = mz_share2_vec[i];
-        ShareValue temp = 0;
-        msg_recv.read_msg((char *)&temp, mz_share2.BITLEN);
-        z.v1 = (temp+ mz_share2.v) & z.MASK;
+        netio.recv_data(3 - party_id, (char *)&z.v1, mz_share2.BYTELEN);
+        z.v1 = (z.v1 + mz_share2.v) & z.MASK;
     }
 }

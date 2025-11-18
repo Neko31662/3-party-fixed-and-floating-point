@@ -36,4 +36,9 @@ void PI_float_mult(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &neti
                    PI_float_mult_intermediate &intermediate, FLTshare *input_x, FLTshare *input_y,
                    FLTshare *output_z);
 
+void PI_float_mult_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+                       std::vector<PI_float_mult_intermediate *> &intermediate_vec,
+                       std::vector<FLTshare *> &input_x_vec, std::vector<FLTshare *> &input_y_vec,
+                       std::vector<FLTshare *> &output_z_vec);
+
 #include "protocol/floating_point_mult.tpp"

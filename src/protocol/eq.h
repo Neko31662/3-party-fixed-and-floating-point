@@ -25,11 +25,16 @@ struct PI_eq_intermediate {
 };
 
 void PI_eq_preprocess(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
-                      PRGSync private_PRG, PI_eq_intermediate &intermediate,
-                      MSSshare *input_x, MSSshare *input_y, MSSshare_p *output_b);
+                      PRGSync private_PRG, PI_eq_intermediate &intermediate, MSSshare *input_x,
+                      MSSshare *input_y, MSSshare_p *output_b);
 
 void PI_eq(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
            PI_eq_intermediate &intermediate, MSSshare *input_x, MSSshare *input_y,
            MSSshare_p *output_b);
+
+void PI_eq_vec(const int party_id, std::vector<PRGSync> &PRGs, NetIOMP &netio,
+               std::vector<PI_eq_intermediate *> &intermediate_vec,
+               std::vector<MSSshare *> &input_x_vec, std::vector<MSSshare *> &input_y_vec,
+               std::vector<MSSshare_p *> &output_b_vec);
 
 #include "protocol/eq.tpp"

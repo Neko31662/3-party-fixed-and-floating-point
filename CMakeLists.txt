@@ -8,6 +8,9 @@ project(floating-point)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 添加 OpenMP 支持
+find_package(OpenMP REQUIRED)
+
 # 定义项目包含目录 - 统一头文件管理
 set(PROJECT_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/src
@@ -17,9 +20,6 @@ set(PROJECT_INCLUDE_DIRS
 
 # 定义通用的源文件集合，避免重复
 set(COMMON_SOURCES
-    # src/protocol/masked_RSS.cpp
-    src/protocol/detect.cpp
-    # src/protocol/addictive_share.cpp
 )
 
 # 为所有目标设置宏定义和包含目录
@@ -38,7 +38,7 @@ function(add_test_target target_name)
         "src/test/${target_name}.cpp"
     )
     setup_target(${target_name})
-    target_link_libraries(${target_name} pthread gmp)
+    target_link_libraries(${target_name} pthread gmp OpenMP::OpenMP_CXX)
 endfunction()
 
 # 主程序可执行文件

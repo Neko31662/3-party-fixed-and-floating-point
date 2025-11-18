@@ -87,7 +87,7 @@ int main() {
         auto ss1 = s1[i], ss2 = s2[i];
         ss1.m = mp1;
         ss2.m = mp2;
-        
+
         // w1, w2: ss1, ss2的wrap bit数量，统计的是低l位的wrap bit
         int w1 = (ss1.r1 & MASK_l) + (ss1.r2 & MASK_l) > MASK_l ? 1 : 0;
         int tmp1 = (ss1.r1 + ss1.r2) & MASK_l;
@@ -99,7 +99,8 @@ int main() {
         // int w1 = ss1.cal_w(l);
         // int w2 = ss2.cal_w(l);
 
-        // cs1, cs2: 计算方式为：m, r1, r2的低l位不取模直接相加，减去 w * 2^l，再减去 2^(l-2)，带符号
+        // cs1, cs2: 计算方式为：m, r1, r2的低l位不取模直接相加，减去 w * 2^l，再减去
+        // 2^(l-2)，带符号
         int cs1 = (ss1.m & MASK_l) + (ss1.r1 & MASK_l) + (ss1.r2 & MASK_l) - w1 * (MASK_l + 1) -
                   (1 << (l - 2));
         int cs2 = (ss2.m & MASK_l) + (ss2.r1 & MASK_l) + (ss2.r2 & MASK_l) - w2 * (MASK_l + 1) -

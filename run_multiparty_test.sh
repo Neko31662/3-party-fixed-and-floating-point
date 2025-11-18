@@ -22,7 +22,6 @@ echo "========================================"
 echo "Multi-Party Test Runner"
 echo "Test Program: $TEST_PROG_NAME"
 echo "Number of parties: $NUM_PARTIES"
-echo "Base port: 12345"
 echo "========================================"
 echo ""
 
