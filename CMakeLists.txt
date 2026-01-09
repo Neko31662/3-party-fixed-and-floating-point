@@ -113,7 +113,7 @@ add_test_target(floating_point_add_test)
 add_test_target(speed_fixed_mult_test)
 
 # 定点乘法SOTA速度测试
-add_test_target(speed_SOTA_test)
+add_test_target(speed_fixed_mult_SOTA_test)
 
 # 浮点乘法速度测试
 add_test_target(speed_floating_mult_test)

@@ -1,10 +1,3 @@
-/*
-To run this, use:
-
-typedef uint256_t LongShareValue;
-
-in config.h
-*/
 #include "protocol/floating_point_mult.h"
 #include <chrono>
 #include <iostream>

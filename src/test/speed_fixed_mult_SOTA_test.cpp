@@ -1,11 +1,4 @@
-/*
-To run this, use:
-
-typedef __uint128_t ShareValue;
-
-in config.h
-*/
-
+#define FORCE_SHARE_VALUE_128
 #include "protocol/masked_RSS.h"
 #include <chrono>
 #include <iostream>
@@ -17,11 +10,15 @@ using namespace std;
 const int BASE_PORT = 12345;
 const int NUM_PARTIES = 3;
 // ------------configs------------
-const int test_nums_list[] = {1 << 12, 1 << 14, 1 << 16, 1 << 18, 1 << 20, 1 << 22, 1 << 24};
+const int test_nums_list[] = {1 << 16, 1 << 17, 1 << 18, 1 << 19, 1 << 20,
+                              1 << 21, 1 << 22, 1 << 23, 1 << 24};
+const pair<int, int> li_lf_list[] = {{4, 8}, {8, 8}, {4, 16}, {8, 16}, {16, 16}};
 const int ell_list[] = {52, 56, 68, 72, 80};
 const int global_batch_size = 4096;
 const int num_threads = 16;
 int test_nums;
+int li;
+int lf;
 int ell;
 // ------------configs------------
 
@@ -84,6 +81,10 @@ void run_one_test(int argc, char **argv) {
         vector<PRGSync> &PRGs = PRGs_list[thread_id];
         MSSshare_mul_res_calc_mul_vec(party_id, *netio, z_share_batch_vec[i], x_share_batch_vec[i],
                                       y_share_batch_vec[i]);
+        for (auto &p : z_share_batch_vec[i]) {
+            p->v1 >>= lf;
+            p->v2 >>= lf;
+        }
     }
 
 #include "test/speed_test_inl/after_compute.inl"
@@ -94,11 +95,13 @@ void run_one_test(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     int party_id = atoi(argv[1]);
-    cout << "Log of speed_SOTA_test, party:" << party_id << endl;
-    for (int i = 6; i < 7; i++) {
+    cout << "Log of speed_fixed_mult_SOTA_test, party:" << party_id << endl;
+    for (int i = 0; i < 9; i++) {
         test_nums = test_nums_list[i];
-        for (int j = 4; j < 5; j++) {
+        for (int j = 0; j < 5; j++) {
             ell = ell_list[j];
+            li = li_lf_list[j].first;
+            lf = li_lf_list[j].second;
             cout << "----------------------------------------------------------" << endl;
             cout << "ell = " << ell << ", test_nums = " << test_nums << endl;
             run_one_test(argc, argv);

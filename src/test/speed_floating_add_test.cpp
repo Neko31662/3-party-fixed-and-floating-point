@@ -1,3 +1,4 @@
+#define FORCE_LONG_SHARE_VALUE_256
 #include "protocol/floating_point_add.h"
 #include <chrono>
 #include <iostream>
@@ -13,7 +14,7 @@ const int test_nums_list[] = {1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14, 1 << 
                               1 << 16, 1 << 17, 1 << 18};
 const pair<int, int> lf_le_list[] = {{23, 8}};
 const int global_batch_size = 1 << 14;
-const int num_threads = 1;
+const int num_threads = 16;
 int test_nums;
 int lf;
 int le;

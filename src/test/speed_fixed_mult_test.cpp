@@ -9,8 +9,8 @@ using namespace std;
 const int BASE_PORT = 12345;
 const int NUM_PARTIES = 3;
 // ------------configs------------
-const int test_nums_list[] = {1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14, 1 << 15,
-                              1 << 16, 1 << 17, 1 << 18, 1 << 19, 1 << 20};
+const int test_nums_list[] = {1 << 16, 1 << 17, 1 << 18, 1 << 19, 1 << 20,
+                              1 << 21, 1 << 22, 1 << 23, 1 << 24};
 const pair<int, int> li_lf_list[] = {{4, 8}, {8, 8}, {4, 16}, {8, 16}, {16, 16}};
 const int global_batch_size = 1 << 14;
 const int num_threads = 16;
@@ -95,7 +95,7 @@ void run_one_test(int argc, char **argv) {
 int main(int argc, char **argv) {
     int party_id = atoi(argv[1]);
     cout << "Log of speed_fixed_mult_test, party:" << party_id << endl;
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < 9; i++) {
         test_nums = test_nums_list[i];
         for (int j = 0; j < 5; j++) {
             li = li_lf_list[j].first;

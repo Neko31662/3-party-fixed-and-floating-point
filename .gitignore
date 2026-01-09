@@ -2,10 +2,16 @@ build/
 *.log
 *.pid
 .vscode/
+.venv/
+tmp/
 
 emp-tool/
 /*.sh
 !setup_env_and_build.sh
 !run_multiparty_test.sh
 !network_simulation.sh
-to_do_list.txt
+
+/*.txt
+!CMakeLists.txt
+
+/*.py
